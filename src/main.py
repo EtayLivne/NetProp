@@ -49,7 +49,7 @@ class Propagater:
         self.gap = 0
         for node in self.graph:
             node.liquid = 0
-            self._set_prev_liquid(node, 0)
+            self._set_prev_liquid(node, reset=True)
 
     # assumes graph is directed, otherwise each edge will be normalized twice, which is bad!
     def _normalize_edge_weights(self):
@@ -59,16 +59,33 @@ class Propagater:
             for edge in edges:
                 edge[WEIGHT] = float(edge[WEIGHT]) / sum_of_weights
 
-    def _get_prev_liquid(self, node):
-        return self.graph.nodes[node][self._PREV_LIQUID_PROPERTY_KEY]
+    def __get_node_properties(self, node):
+        return self.grap.nodes[node]
 
-    def _set_prev_liquid(self, node, prev_liquid):
-        self.graph.nodes[node][self._PREV_LIQUID_PROPERTY_KEY] = prev_liquid
+    def _get_prev_liquid(self, node, source_node):
+        node_properties = self.__get_node_properties(self, node)
+        return node_properties[self._PREV_LIQUID_PROPERTY_KEY][source_node]
+
+    def _set_prev_liquid(self, node, prev_liquid, source_node):
+        node_properties = self.__get_node_properties(self, node)
+        node_properties[self._PREV_LIQUID_PROPERTY_KEY][source_node] = prev_liquid
+
+    def _reset_liquid(self, node, source_nodes=None):
+        node_properties = self.__get_node_properties(node)
+        if source_nodes:
+            for source_node in source_nodes:
+                del(node_properties[self._PREV_LIQUID_PROPERTY_KEY][source_node])
+        else:
+            node_properties[self._PREV_LIQUID_PROPERTY_KEY] = dict()
+
+    def _snapshot_to_prev_liquid(self, node):
+        node_prev_liquids = self.__get_node_properties(node)[self._PREV_LIQUID_PROPERTY_KEY]
+        node_prev_liquids.update(node.liquids)
 
     def _propagate_once(self, subgraph, prior_set_subgraph, confidence_coefficient):
         alfa = confidence_coefficient
         for node in subgraph:
-            self._set_prev_liquid(node, node.liquid)
+            self._snapshot_to_prev_liquid(node)
 
         if next(iter(prior_set_subgraph)).liquid == 0:
             for node in prior_set_subgraph:

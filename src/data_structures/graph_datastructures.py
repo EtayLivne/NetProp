@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import total_ordering
 
 
@@ -6,7 +6,7 @@ from functools import total_ordering
 @total_ordering
 class Protein:
     id: int
-    liquid: float = 0
+    liquids: dict = field(default_factory=dict)
     rank: int = 0
 
     def __hash__(self):
