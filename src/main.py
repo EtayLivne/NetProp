@@ -1,15 +1,17 @@
 import networkx as nx
 from copy import deepcopy
+from itertools import chain
 from math import sqrt, pow, floor
 from collections.abc import Iterable
-from itertools import chain
 
+from datastructures.graph_datastructures import Protein, construct_prior_set
+from data_extractors import acquire_prior_set_data
 # TODO finish refactor of collection of functions to class
 # TODO maybe save both normalized and unnormalized edge weights?
 # TODO support multiprocessing, shouldn't be difficult (famous last words, and this is really more of a bonus)
 WEIGHT = "weight"
 DATA = 2
-from datastructures.graph_datastructures import Protein
+
 
 
 # TODO optimize away the .get in liquid spilling by initializing the gap keys for all nodes with 0 value for prior set nodes
@@ -41,27 +43,25 @@ def get_propagater(source, from_file=True):
 
 class Propagater:
     _PREV_LIQUID_PROPERTY_KEY = "prev_liquids"
-    _DEFUALT_HALT_CONDITION_GAP = 10e-3
+    _DEFUALT_HALT_CONDITION_GAP = 10e-2
     _DEFAULT_LIQUID_TYPE = "__default_liquid"
 
     def __init__(self, graph, confidence_coefficient, halt_condition_gap=_DEFUALT_HALT_CONDITION_GAP):
         self.graph = graph
         self.confidence_coefficient = confidence_coefficient
         self.halt_condition_gap = halt_condition_gap
-        self.gaps = None
 
         self._normalize_edge_weights()
         self._reset_propagation_parameters()
 
     @staticmethod
-    def validate_propagation_node_sets(network, *node_id_sets):
-        missing_nodes = [n_id for n_id in chain(*node_id_sets) if n_id not in [node.id for node in network.nodes()]]
+    def validate_propagation_node_sets(network, *nodes):
+        missing_nodes = [node.id for node in chain(*nodes) if node not in network.nodes.keys()]
         if missing_nodes:
             print(f'The following nodes are specified in propagation node_set parameters but are not present in '
                   f'the propagation network: {missing_nodes}')
 
     def _reset_propagation_parameters(self, liquid_types=None):
-        self.gaps.update({liquid_type: 0 for liquid_type in liquid_types})
         for node in self.graph:
             self._reset_liquid(node, liquid_types=liquid_types)
 
@@ -88,7 +88,7 @@ class Propagater:
         node_properties = self.__get_node_properties(node)
         if liquid_types:
             for liquid_type in liquid_types:
-                node_properties[self.self._PREV_LIQUID_PROPERTY_KEY][liquid_type] = 0
+                node_properties[self._PREV_LIQUID_PROPERTY_KEY][liquid_type] = 0
                 node.liquids[liquid_type] = 0
         else:
             node_properties[self._PREV_LIQUID_PROPERTY_KEY] = dict()
@@ -97,53 +97,65 @@ class Propagater:
     # Stores a snapshot of current liquid amount in each node into the node's prev_liquid property
     def _snapshot_to_prev_liquid(self, node, liquid_types):
         node_prev_liquids = self.__get_node_properties(node)[self._PREV_LIQUID_PROPERTY_KEY]
-        node_prev_liquids.update({liquid_type: node.liquids[liquid_type] for liquid_type in liquid_types})
+        try:
+            node_prev_liquids.update({liquid_type: node.liquids[liquid_type] for liquid_type in liquid_types})
+        except:
+            jhgf = 0
 
-    def _propagate_once(self, subgraph, prior_set_subgraph, liquid_types, confidence_coefficient):
-        alfa = confidence_coefficient
+    def _propagate_once(self, subgraph, prior_set_subgraph, liquid_types):
+        alpha = self.confidence_coefficient
         for node in subgraph:
             self._snapshot_to_prev_liquid(node, liquid_types=liquid_types)
 
         # If liquids dict is empty in any node in prior set then this is the first propagation step
-        if not next(iter(prior_set_subgraph)).liquids:
-            for liquid_type, liquid_type_sources in liquid_types.items():
 
-            for node in prior_set_subgraph:
-                node.liquids[node] = 1 - alfa
-                self.gaps[node] = 1 - alfa
-        else:
-            for node in subgraph.nodes():
-                for neighbor in subgraph.neighbors(node):
-                    edge_capacity = subgraph[node][neighbor][WEIGHT] * alfa
-                    for source_node in prior_set_subgraph:
-                        neighbor.liquids[source_node] = neighbor.liquids.get(source_node, 0) +\
-                                                        node.liquids.get(source_node, 0) * edge_capacity
-                for source_node in prior_set_subgraph:
-                    node.liquids[source_node] = node.liquids.get(source_node, 0) - self._get_prev_liquid(node, source_node)
-                # pump new liquid for next round
-                if node in prior_set_subgraph:
-                    node.liquids[node] = node.liquids[node] + (1 - alfa)
+        for node in subgraph.nodes():
+            for neighbor in subgraph.neighbors(node):
+                edge_capacity = subgraph[node][neighbor][WEIGHT] * alpha
+                for liquid_type in liquid_types:
+                    neighbor.liquids[liquid_type] = neighbor.liquids.get(liquid_type, 0) +\
+                                                    node.liquids.get(liquid_type, 0) * edge_capacity
+            for liquid_type in liquid_types:
+                node.liquids[liquid_type] = node.liquids.get(liquid_type, 0) - self._get_prev_liquid(node, liquid_type)
+            # pump new liquid for next round
 
-            for source_node in prior_set_subgraph:
-                self.gaps[source_node] = sqrt(sum(pow(node.liquids[source_node] - self._get_prev_liquid(node, source_node), 2)
-                                                  for node in subgraph.nodes()))
+        for node in prior_set_subgraph:
+            node.liquids.update({liquid_type: node.liquids[liquid_type] + 1 - alpha for liquid_type in node.source_of})
 
-    def propagate(self, prior_set_ids):
-        self.validate_propagation_node_sets(self.graph, prior_set_ids)
 
+    def propagate(self, prior_set):
+        self.validate_propagation_node_sets(self.graph, prior_set)
+
+        liquid_types = set.union(*[prior.source_of for prior in prior_set])
         self._reset_propagation_parameters(liquid_types=liquid_types)
-        prior_set = {node for node in self.graph.nodes if node.id in prior_set_ids}
-        prior_set_subgraph = nx.subgraph(self.graph, prior_set)
 
-        discovered_subgraph_nodes = set(prior_set)
-        newest_subgraph_nodes = set(prior_set)
+        prior_set_subgraph = nx.subgraph(self.graph, [node for node in self.graph.nodes.keys() if node in prior_set])
+        for node in prior_set_subgraph.nodes():
+            node.source_of = next(prior for prior in prior_set if prior.id == node.id).source_of
+
+        discovered_subgraph_nodes = set(prior_set_subgraph.nodes())
+        newest_subgraph_nodes = set(prior_set_subgraph.nodes())
+
         # set gaps for all nodes in prior set to >> halt condition
-        self.gaps.update({liquid_type: 10*self.halt_condition_gap for liquid_type in liquid_types})
-        while [v for v in self.gaps.values() if v > self.halt_condition_gap]:
+        gaps = {liquid_type: 10*self.halt_condition_gap for liquid_type in liquid_types}
+        check_for_gaps_counter = 1
+        while True:
             discovered_subgraph = nx.subgraph(self.graph, discovered_subgraph_nodes)
-            self._propagate_once(discovered_subgraph, prior_set_subgraph, liquid_types, self.confidence_coefficient)
+            self._propagate_once(discovered_subgraph, prior_set_subgraph, liquid_types)
+
+            if check_for_gaps_counter % 3 == 0:
+                for l_type in liquid_types:
+                    gaps[l_type] = sqrt(sum(pow(node.liquids[l_type] - self._get_prev_liquid(node, l_type), 2)
+                                        for node in discovered_subgraph.nodes.keys()))
+                if min(gaps.values()) < self.halt_condition_gap:
+                    break
+                print(f'smallest gap is: {min(gaps.values())}')
+            else:
+                check_for_gaps_counter += 1
+
             newest_subgraph_nodes = set.union(*[set(self.graph.neighbors(node)) for node in newest_subgraph_nodes])
             discovered_subgraph_nodes.update(newest_subgraph_nodes)
+
 
     # deprecated
     def top_k_candidates(self, k):
@@ -173,9 +185,13 @@ def measure_gene_knockout_impact(network_source_file_path, prior_set_ids, target
 
 
 if __name__ == "__main__":
+    x = acquire_prior_set_data()
+    prior_set_data = {id: data.infection_roles for id, data in acquire_prior_set_data().items()}
     ppi = graph_from_file(r"..\data\H_sapiens.net")
     print("graph created!")
-    prop = Propagater(ppi, 0.9)
-    prop.propagate({1, 2, 100})
+
+    prop = Propagater(ppi, 0.3)
+    prop.propagate(construct_prior_set(prior_set_data))
     print("propagation complete!")
-    jh = 76
+    top_k = sorted(prop.graph.nodes(), key=lambda node: sqrt(sum(pow(node.liquids[liquid], 2) for liquid in node.liquids)), reverse=True)
+    print("done")

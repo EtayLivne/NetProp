@@ -18,3 +18,9 @@ class CovTargetMetadata:
         else:
             self.infection_roles.update(roles)
 
+@dataclass()
+class PriorProtein():
+    id: int
+    categories:  set = field(default_factory=set)
+
+

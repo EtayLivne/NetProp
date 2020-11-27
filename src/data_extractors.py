@@ -45,7 +45,7 @@ def acquire_cov_human_ppi_prior_set_data(cov_human_ppi, cov_protein_roles):
     return prior_set_data
 
 
-def acquire_prior_set_data(from_json=False, cov_protein_roles_path=r"data/cov_protein_roles.csv"):
+def acquire_prior_set_data(from_json=False, cov_protein_roles_path=r"../data/cov_protein_roles.csv"):
     assert(path.isfile(cov_protein_roles_path), "cov_protein_roles must be set to the path of an appropriate csv file")
     cov_human_ppi = acquire_cov_human_ppi()
     cov_protein_roles = init_cov_protein_roles(cov_protein_roles_path)
