@@ -1,197 +1,128 @@
-import networkx as nx
-from copy import deepcopy
-from itertools import chain
-from math import sqrt, pow, floor
-from collections.abc import Iterable
+import json
+from math import sqrt, pow
 
-from datastructures.graph_datastructures import Protein, construct_prior_set
-from data_extractors import acquire_prior_set_data
-# TODO finish refactor of collection of functions to class
-# TODO maybe save both normalized and unnormalized edge weights?
-# TODO support multiprocessing, shouldn't be difficult (famous last words, and this is really more of a bonus)
-WEIGHT = "weight"
-DATA = 2
+from numpy import sign
+
+from data_extractors import *
+from propagater import Propagater
+from datastructures.graph_datastructures import is_cov_protein
 
 
 
-# TODO optimize away the .get in liquid spilling by initializing the gap keys for all nodes with 0 value for prior set nodes
 
-def graph_from_file(file_path):
-    source_node_index = 0
-    target_node_index = 1
-    edge_weight_index = 2
+# If node in 2 has less liquid than same node in 1, then the distance grew, and will be positive
+def measure_propagation_distances(propagater1, propagater2, l2_distance=True):
+    distance_dict = {}
+    if l2_distance:
+        def distance_function(x, y):
+            return sign(x-y)*pow((x-y), 2)
+    else:
+        def distance_function(x, y):
+            return x - y
 
-    graph = nx.DiGraph()
-    discovered_nodes_map = dict()
-    with open(file_path, 'r') as handler:
-        for line in handler.readlines():
-            values = line.split()
-            for node_index in (values[source_node_index], values[target_node_index]):
-                if node_index not in discovered_nodes_map:
-                    discovered_nodes_map[node_index] = Protein(id=int(node_index))
+    propagater2_nodes = {node.id: node for node in propagater2.graph.nodes}
+    for node in propagater1.graph.nodes:
+        if node.id in propagater2_nodes:
+            for liquid_type, liquid in node.liquids.items():
+                distance_dict[liquid_type] = distance_dict.get(liquid_type, 0) + \
+                                             distance_function(liquid, propagater2_nodes[node.id].liquids.get(liquid_type, 0))
 
-            graph.add_edge(discovered_nodes_map[values[source_node_index]],
-                           discovered_nodes_map[values[target_node_index]],
-                           weight=float(values[edge_weight_index]))
-    return graph
+    for liquid_type in distance_dict:
+        distance_dict[liquid_type] = sign(distance_dict[liquid_type]) * sqrt(abs(distance_dict[liquid_type]))
 
-
-def get_propagater(source, from_file=True):
-    graph = graph_from_file(source) if from_file else deepcopy(source)
-    return Propagater(graph)
+    return distance_dict
 
 
-class Propagater:
-    _PREV_LIQUID_PROPERTY_KEY = "prev_liquids"
-    _DEFUALT_HALT_CONDITION_GAP = 10e-2
-    _DEFAULT_LIQUID_TYPE = "__default_liquid"
+def measure_gene_knockout_impact(graph, knockout_gene_ids, confidence_coef,
+                                 halt_condition_gap=Propagater._DEFUALT_HALT_CONDITION_GAP, prior_set_ids=None):
+    if prior_set_ids is None:
+        prior_set = {node for node in graph.nodes if is_cov_protein(node)}
+    else:
+        protein_set = {Protein(id=prior_id) for prior_id in prior_set_ids}
 
-    def __init__(self, graph, confidence_coefficient, halt_condition_gap=_DEFUALT_HALT_CONDITION_GAP):
-        self.graph = graph
-        self.confidence_coefficient = confidence_coefficient
-        self.halt_condition_gap = halt_condition_gap
+    propagater = Propagater(graph, confidence_coef, halt_condition_gap=halt_condition_gap)
+    print("propagating original graph")
+    propagation_distance_dict_l1 = dict()
+    propagation_distance_dict_l2 = dict()
+    propagater.propagate(prior_set)
+    print("done propagating original graph")
+    print(f'There are {len(knockout_gene_ids)} knockouts to measure')
+    i = 0
+    for knockout_genes in knockout_gene_ids:
+        i = i + 1
+        knockout_propagater = propagater.gene_knockout_copy(knockout_genes)
+        print(f'begininig propagation on network that knocked out {knockout_genes}')
+        knockout_propagater.propagate(prior_set)
+        print(f'done with knockout {i} out of {len(knockout_gene_ids)}')
+        propagation_distance_dict_l1[str(knockout_genes)] = \
+            measure_propagation_distances(propagater, knockout_propagater, l2_distance=False)
+        propagation_distance_dict_l2[str(knockout_genes)] = \
+            measure_propagation_distances(propagater, knockout_propagater)
 
-        self._normalize_edge_weights()
-        self._reset_propagation_parameters()
-
-    @staticmethod
-    def validate_propagation_node_sets(network, *nodes):
-        missing_nodes = [node.id for node in chain(*nodes) if node not in network.nodes.keys()]
-        if missing_nodes:
-            print(f'The following nodes are specified in propagation node_set parameters but are not present in '
-                  f'the propagation network: {missing_nodes}')
-
-    def _reset_propagation_parameters(self, liquid_types=None):
-        for node in self.graph:
-            self._reset_liquid(node, liquid_types=liquid_types)
-
-    # assumes graph is directed, otherwise each edge will be normalized twice, which is bad!
-    def _normalize_edge_weights(self):
-        for node in self.graph:
-            edges = [self.graph[node][neighbor] for neighbor in self.graph.neighbors(node)]
-            sum_of_weights = sum(edge[WEIGHT] for edge in edges)
-            for edge in edges:
-                edge[WEIGHT] = float(edge[WEIGHT]) / sum_of_weights
-
-    def __get_node_properties(self, node):
-        return self.graph.nodes[node]
-
-    def _get_prev_liquid(self, node, liquid_type):
-        node_properties = self.__get_node_properties(node)
-        return node_properties[self._PREV_LIQUID_PROPERTY_KEY].get(liquid_type, 0)
-
-    def _set_prev_liquid(self, node, prev_liquid, liquid_type):
-        node_properties = self.__get_node_properties(node)
-        node_properties[self._PREV_LIQUID_PROPERTY_KEY][liquid_type] = prev_liquid
-
-    def _reset_liquid(self, node, liquid_types=None):
-        node_properties = self.__get_node_properties(node)
-        if liquid_types:
-            for liquid_type in liquid_types:
-                node_properties[self._PREV_LIQUID_PROPERTY_KEY][liquid_type] = 0
-                node.liquids[liquid_type] = 0
-        else:
-            node_properties[self._PREV_LIQUID_PROPERTY_KEY] = dict()
-            node.liquids = dict()
-
-    # Stores a snapshot of current liquid amount in each node into the node's prev_liquid property
-    def _snapshot_to_prev_liquid(self, node, liquid_types):
-        node_prev_liquids = self.__get_node_properties(node)[self._PREV_LIQUID_PROPERTY_KEY]
-        try:
-            node_prev_liquids.update({liquid_type: node.liquids[liquid_type] for liquid_type in liquid_types})
-        except:
-            jhgf = 0
-
-    def _propagate_once(self, subgraph, prior_set_subgraph, liquid_types):
-        alpha = self.confidence_coefficient
-        for node in subgraph:
-            self._snapshot_to_prev_liquid(node, liquid_types=liquid_types)
-
-        # If liquids dict is empty in any node in prior set then this is the first propagation step
-
-        for node in subgraph.nodes():
-            for neighbor in subgraph.neighbors(node):
-                edge_capacity = subgraph[node][neighbor][WEIGHT] * alpha
-                for liquid_type in liquid_types:
-                    neighbor.liquids[liquid_type] = neighbor.liquids.get(liquid_type, 0) +\
-                                                    node.liquids.get(liquid_type, 0) * edge_capacity
-            for liquid_type in liquid_types:
-                node.liquids[liquid_type] = node.liquids.get(liquid_type, 0) - self._get_prev_liquid(node, liquid_type)
-            # pump new liquid for next round
-
-        for node in prior_set_subgraph:
-            node.liquids.update({liquid_type: node.liquids[liquid_type] + 1 - alpha for liquid_type in node.source_of})
+    return propagation_distance_dict_l1, propagation_distance_dict_l2
 
 
-    def propagate(self, prior_set):
-        self.validate_propagation_node_sets(self.graph, prior_set)
+def prioritize_knockout_gene_sets(propagation_distance_dict, l2_distance=True):
+    if l2_distance:
+        def norm(distances):
+            sum_with_signs = sum(sign(d) * pow(d, 2) for d in distances)
 
-        liquid_types = set.union(*[prior.source_of for prior in prior_set])
-        self._reset_propagation_parameters(liquid_types=liquid_types)
+            return sign(sum_with_signs) * sqrt(abs(sum_with_signs))
+    else:
+        def norm(distances):
+            return sum(d for d in distances)
 
-        prior_set_subgraph = nx.subgraph(self.graph, [node for node in self.graph.nodes.keys() if node in prior_set])
-        for node in prior_set_subgraph.nodes():
-            node.source_of = next(prior for prior in prior_set if prior.id == node.id).source_of
-
-        discovered_subgraph_nodes = set(prior_set_subgraph.nodes())
-        newest_subgraph_nodes = set(prior_set_subgraph.nodes())
-
-        # set gaps for all nodes in prior set to >> halt condition
-        gaps = {liquid_type: 10*self.halt_condition_gap for liquid_type in liquid_types}
-        check_for_gaps_counter = 1
-        while True:
-            discovered_subgraph = nx.subgraph(self.graph, discovered_subgraph_nodes)
-            self._propagate_once(discovered_subgraph, prior_set_subgraph, liquid_types)
-
-            if check_for_gaps_counter % 3 == 0:
-                for l_type in liquid_types:
-                    gaps[l_type] = sqrt(sum(pow(node.liquids[l_type] - self._get_prev_liquid(node, l_type), 2)
-                                        for node in discovered_subgraph.nodes.keys()))
-                if min(gaps.values()) < self.halt_condition_gap:
-                    break
-                print(f'smallest gap is: {min(gaps.values())}')
-            else:
-                check_for_gaps_counter += 1
-
-            newest_subgraph_nodes = set.union(*[set(self.graph.neighbors(node)) for node in newest_subgraph_nodes])
-            discovered_subgraph_nodes.update(newest_subgraph_nodes)
+    return sorted([(knockout_set, norm(distances.values()), distances) for knockout_set, distances in propagation_distance_dict.items()],
+                  key=lambda item: item[1], reverse=True)
 
 
-    # deprecated
-    def top_k_candidates(self, k):
-        raise NotImplemented
-        top_k = floor(len(self.graph) / k)
-        return sorted(self.graph.nodes(), reverse=True)[:top_k]
+def compare_priorities(*propagation_distance_dicts, top_k=100):
+    rankings_dict = dict()
+    for d in propagation_distance_dicts:
+        distance_dict_name = d[0]
+        distance_dict = d[1]
+        l1_ranking = prioritize_knockout_gene_sets(distance_dict, l2_distance=False)
+        l2_ranking = prioritize_knockout_gene_sets(distance_dict)
+        rankings_dict[distance_dict_name] = {
+            f'top_{top_k}_l1_distances': [{
+                    f'norm': e[1],
+                    f'distances': e[2],
+                    "knocked_genes_entrezids": e[0],
+                    "knockout_gene_ids": [int(num) for num in e[0][1:-1].split(',')]
+            } for e in l1_ranking[:top_k]],
+            f'top_{top_k}_l2_distances': [{
+                    f'norm': e[1],
+                    f'distances': e[2],
+                    "knocked_genes_entrezids": e[0],
+                    "knockout_gene_ids": [int(num) for num in e[0][1:-1].split(',')]
+            } for e in l2_ranking[:top_k]],
+        }
 
-
-def measure_gene_knockout_impact(network_source_file_path, prior_set_ids, target_set_ids, knockout_candidate_ids):
-    if type(knockout_candidate_ids) is int:
-        knockout_candidate_ids = {knockout_candidate_ids}
-    elif not isinstance(knockout_candidate_ids, Iterable):
-        raise TypeError("knockoout_candidate_ids must be a single int or iterable of ints")
-    network = graph_from_file(network_source_file_path)
-    knockout_network = deepcopy(network)
-    knockout_network.remove_nodes_from(knockout_candidate_ids)
-    Propagater.validate_propagation_node_sets(network, prior_set_ids, target_set_ids, knockout_candidate_ids)
-
-    confidence_coefficient = 0.3
-    network_propagater = Propagater(network, confidence_coefficient)
-    knockout_network_propagater = Propagater(knockout_network, confidence_coefficient)
-
-    network_propagater.propagate(prior_set_ids)
-    knockout_network_propagater.propagate(prior_set_ids.difference(knockout_candidate_ids))
-    # TODO plot differences in graphs
+    return rankings_dict
 
 
 
 if __name__ == "__main__":
-    x = acquire_prior_set_data()
-    prior_set_data = {id: data.infection_roles for id, data in acquire_prior_set_data().items()}
-    ppi = graph_from_file(r"..\data\H_sapiens.net")
+    cov_human_ppi = acquire_cov_human_ppi()
+    cov_protein_roles = init_cov_protein_roles(DEFAULT_COV_PROTEIN_ROLES_FILE_PATH)
+    human_ppi = graph_from_file(r"..\data\H_sapiens.net")
     print("graph created!")
+    prior_set = setup_cov_prior_set(human_ppi, cov_human_ppi, cov_protein_roles)
 
-    prop = Propagater(ppi, 0.3)
-    prop.propagate(construct_prior_set(prior_set_data))
-    print("propagation complete!")
-    top_k = sorted(prop.graph.nodes(), key=lambda node: sqrt(sum(pow(node.liquids[liquid], 2) for liquid in node.liquids)), reverse=True)
-    print("done")
+
+    prop = Propagater(human_ppi, 0.9)
+    prop.propagate(prior_set)
+    p_list = sorted(list(node for node in prop.graph.nodes if not is_cov_protein(node)),
+                    key=lambda node: sum(node.liquids.values()), reverse=True)[:50]
+    # knockout_gene_ids = [{p.id} for p in p_list]
+    knockout_gene_ids = []
+    for i in range(len(p_list)):
+        knockout_gene_ids.extend([{p_list[i].id, p_list[j].id} for j in range(i + 1, len(p_list))])
+    gene_knockout_distance_dicts = measure_gene_knockout_impact(human_ppi, knockout_gene_ids, 0.9)
+    rankings = compare_priorities(["l1_distance_dict", gene_knockout_distance_dicts[0]],
+                                  ["l2_distance_dict", gene_knockout_distance_dicts[1]])
+
+    with open(r'../results/l1_l2_double_knockout_signed_l2_norm.json', "w") as handler:
+        json.dump(rankings, handler, indent=4)
+
+    jhgf  = 9

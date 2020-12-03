@@ -33,3 +33,12 @@ def construct_prior_set(prior_set_seed):
             raise ValueError("members of iterable prior set seed must be integers")
         except TypeError:
             raise TypeError("prior set seed must be a dict or an iterable!")
+
+
+def is_cov_protein(protein):
+    if isinstance(protein, Protein):
+        return protein.id < 0
+    elif isinstance(protein, int) or isinstance(protein, float):
+        return protein < 0
+    else:
+        raise TypeError("only Protein objects or protein ids can represent a protein")
