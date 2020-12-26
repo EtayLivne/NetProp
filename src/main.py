@@ -103,26 +103,31 @@ def compare_priorities(*propagation_distance_dicts, top_k=100):
 
 
 if __name__ == "__main__":
-    cov_human_ppi = acquire_cov_human_ppi()
-    cov_protein_roles = init_cov_protein_roles(DEFAULT_COV_PROTEIN_ROLES_FILE_PATH)
-    human_ppi = graph_from_file(r"..\data\H_sapiens.net")
-    print("graph created!")
-    prior_set = setup_cov_prior_set(human_ppi, cov_human_ppi, cov_protein_roles)
-
-
-    prop = Propagater(human_ppi, 0.9)
-    prop.propagate(prior_set)
-    p_list = sorted(list(node for node in prop.graph.nodes if not is_cov_protein(node)),
-                    key=lambda node: sum(node.liquids.values()), reverse=True)[:50]
-    # knockout_gene_ids = [{p.id} for p in p_list]
-    knockout_gene_ids = []
-    for i in range(len(p_list)):
-        knockout_gene_ids.extend([{p_list[i].id, p_list[j].id} for j in range(i + 1, len(p_list))])
-    gene_knockout_distance_dicts = measure_gene_knockout_impact(human_ppi, knockout_gene_ids, 0.9)
-    rankings = compare_priorities(["l1_distance_dict", gene_knockout_distance_dicts[0]],
-                                  ["l2_distance_dict", gene_knockout_distance_dicts[1]])
-
-    with open(r'../results/l1_l2_double_knockout_signed_l2_norm.json', "w") as handler:
-        json.dump(rankings, handler, indent=4)
-
-    jhgf  = 9
+    import json
+    with open(r'D:\Etay\studies\thesis\code\NetProp\data\COVID-19-–-VeroE6-IF_reframedb-data_2020-12-13.json', 'r') as h:
+        d = json.load(h)
+    with open(r'D:\Etay\studies\thesis\code\NetProp\data\COVID-19-–-VeroE6-IF_reframedb-data_2020-12-13.json', 'w') as h:
+        json.dump(d, h, indent=4)
+    # cov_human_ppi = acquire_cov_human_ppi()
+    # cov_protein_roles = init_cov_protein_roles(DEFAULT_COV_PROTEIN_ROLES_FILE_PATH)
+    # human_ppi = graph_from_file(r"..\data\H_sapiens.net")
+    # print("graph created!")
+    # prior_set = setup_cov_prior_set(human_ppi, cov_human_ppi, cov_protein_roles)
+    #
+    #
+    # prop = Propagater(human_ppi, 0.9)
+    # prop.propagate(prior_set)
+    # p_list = sorted(list(node for node in prop.graph.nodes if not is_cov_protein(node)),
+    #                 key=lambda node: sum(node.liquids.values()), reverse=True)[:50]
+    # # knockout_gene_ids = [{p.id} for p in p_list]
+    # knockout_gene_ids = []
+    # for i in range(len(p_list)):
+    #     knockout_gene_ids.extend([{p_list[i].id, p_list[j].id} for j in range(i + 1, len(p_list))])
+    # gene_knockout_distance_dicts = measure_gene_knockout_impact(human_ppi, knockout_gene_ids, 0.9)
+    # rankings = compare_priorities(["l1_distance_dict", gene_knockout_distance_dicts[0]],
+    #                               ["l2_distance_dict", gene_knockout_distance_dicts[1]])
+    #
+    # with open(r'../results/l1_l2_double_knockout_signed_l2_norm.json', "w") as handler:
+    #     json.dump(rankings, handler, indent=4)
+    #
+    # jhgf  = 9
