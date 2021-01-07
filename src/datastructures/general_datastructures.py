@@ -11,8 +11,6 @@ class PriorMetadata:
     name: str
     infection_roles: set = field(default_factory=set)
 
-
-
     def add_infection_roles(self, roles):
         if type(roles) is str:
             self.infection_roles.update({roles})
