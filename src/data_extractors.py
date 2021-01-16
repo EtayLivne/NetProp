@@ -35,7 +35,7 @@ def prior_set_data_from_cov_human_ppi(cov_human_ppi, cov_protein_roles, from_tar
     cov_human_interactions = [edge for edge in cov_human_ppi.edges(data=True)]
     for interaction in cov_human_interactions:
         interaction_name = interaction[2]["name"].lower().split()
-        source, target = interaction_name[0], interaction_name[0]
+        source, target = interaction_name[0], interaction_name[1]
 
         prior = target if from_targets else source
         metadata_class = HumanPriorMetadata if from_targets else CovPriorMetadata
@@ -59,7 +59,6 @@ def prior_set_data_from_cov_human_ppi(cov_human_ppi, cov_protein_roles, from_tar
             prior_set_data[-1*i - 1] = prior_set_data.pop(gene_names[i])
 
     return prior_set_data
-
 
 
 def setup_cov_prior_set(human_ppi, cov_human_ppi, cov_protein_roles):

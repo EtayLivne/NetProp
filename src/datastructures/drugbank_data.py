@@ -1,6 +1,9 @@
 import os
 import csv
+import json
 from dataclasses import dataclass, field
+from mygene import MyGeneInfo
+
 
 @dataclass()
 class DrugBankProteinTarget:
@@ -77,8 +80,22 @@ class DrugBankProteinTargetsData:
 
         return drug_to_target_map
 
-d = DrugBankProteinTargetsData()
-d.init_from_file(r'C:\studies\code\NetProp\data\all_drugbank_drug_targets.csv')
-r = d.get_human_drug_protein_targets()
-regr= 7
+
+if __name__ == "__main__":
+    with open(r'../../data/gene_symbol_to_entrezgeneid.json', 'r') as json_handler:
+        human_gene_symbol_to_id = json.load(json_handler)
+
+    drugbank_data = DrugBankProteinTargetsData()
+    drugbank_data.init_from_file(r'C:\studies\thesis\code\NetProp\data\all_drugbank_drug_targets.csv')
+    drug_to_target_map = drugbank_data.get_human_drug_protein_targets()
+    all_targets = set.union(*[targets for targets in drug_to_target_map.values()])
+    ncbi_query = MyGeneInfo().querymany(all_targets, scopes="symbol", fields=["entrezgene", "symbol"], species="human")
+    for result in ncbi_query:
+        if result.get("notfound", False) or "entrezgene" not in result:
+            pass
+        else:
+            human_gene_symbol_to_id[result["symbol"]] = int(result["entrezgene"])
+
+    with open(r'../../data/gene_symbol_to_entrezgeneid_new.json', 'w') as json_handler:
+        human_gene_symbol_to_id = json.dump(human_gene_symbol_to_id, json_handler, indent=4)
 

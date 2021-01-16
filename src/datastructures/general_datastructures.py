@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass, field
 
 @dataclass()
@@ -37,4 +38,43 @@ class CovPriorMetadata(PriorMetadata):
         else:
             self.sources.update(targets)
 
+@dataclass(frozen=True)
+class KnockoutGeneSet:
+    name: str
+    gene_set: set = field(default_factory=set)
 
+    def __iter__(self):
+        return iter(self.gene_set)
+
+
+class Singleton(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
+class SymbolEntrezgeneMap(metaclass=Singleton):
+    def __init__(self, from_file=None):
+        self._symbol_to_entrezgene_map = dict()
+        if from_file:
+            self._init_from_file(from_file)
+
+    def _init_from_file(self, path):
+        with open(path, 'r') as json_handler:
+            self._symbol_to_entrezgene_map = json.load(json_handler)
+
+    def get_entrezgene(self, symbol):
+        return self._symbol_to_entrezgene_map[symbol]
+
+    def get_symbol(self, entrezgene):
+        try:
+            return next(symbol for symbol in self._symbol_to_entrezgene_map if self._symbol_to_entrezgene_map[symbol] == entrezgene)
+        except StopIteration:
+            raise KeyError
+
+
+def init_symbol_entrezgene_map(from_file=None):
+    return SymbolEntrezgeneMap(from_file=from_file)
