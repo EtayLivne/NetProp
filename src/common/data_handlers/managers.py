@@ -1,8 +1,9 @@
 import networkx as nx
 
+from common.data_classes.data_classes import Protein
 from core.data_handlers.managers import AbstractDataManager
-from common.data_handlers.extractors import HSapiensExtractor, CSVExtractor, JsonExtractor,  NDEXExtractor,\
-                                            GeneInfoExtractor
+from common.data_handlers.extractors import HSapiensExtractor, CSVExtractor, NDEXExtractor, GeneInfoExtractor
+
 
 
 class HSapiensManager(AbstractDataManager):
@@ -17,21 +18,14 @@ class HSapiensManager(AbstractDataManager):
         if raw:
             return raw_data
 
-        source_node_index = 0
-        target_node_index = 1
-        edge_weight_index = 2
-
-        # TODO figure out graph structure than construct accordingly
         graph = nx.DiGraph()
-        discovered_nodes_map = dict()
         for triplet in raw_data:
-            for node_index in (triplet[source_node_index], triplet[target_node_index]):
-                if node_index not in discovered_nodes_map:
-                    discovered_nodes_map[node_index] = Protein(id=int(node_index))
+            source_node, target_node, edge_weight = triplet
+            graph.add_edge(source_node, target_node, weight=float(edge_weight))
+            for node_id in [source_node, target_node]:
+                if not g.nodes[node_id]:
+                    g.nodes[node_id]["protein_data"] = Protein(id=int(node_id))
 
-            graph.add_edge(discovered_nodes_map[triplet[source_node_index]],
-                           discovered_nodes_map[triplet[target_node_index]],
-                           weight=float(triplet[edge_weight_index]))
         return graph
 
 

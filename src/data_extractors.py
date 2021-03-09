@@ -90,7 +90,8 @@ def setup_cov_prior_set(human_ppi, cov_human_ppi, cov_protein_roles):
         source_name = sources[i]
         source_id = -1*i - 1
         source_roles = cov_protein_roles.get(source_name, set())
-        network_node = Protein(id=source_id, source_of=source_roles)
+        # network_node = Protein(id=source_id, source_of=source_roles)
+        network_node = Protein(id=source_id, source_of={source_id})
         prior_set.append(network_node)
 
         human_ppi.add_node(network_node)

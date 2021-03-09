@@ -39,7 +39,7 @@ class CovPriorMetadata(PriorMetadata):
             self.sources.update(targets)
 
 @dataclass(frozen=True)
-class KnockoutGeneSet:
+class GeneSet:
     name: str
     gene_set: set = field(default_factory=set)
 

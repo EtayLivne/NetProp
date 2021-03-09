@@ -26,7 +26,7 @@ class AbstractTranslationMap(metaclass=ABCMeta):
 
 class BaseTranslationMap(metaclass=ABCMeta):
     def __init__(self, translation_dict):
-        self._map = dict()
+        self._map = translation_dict
         self._reverse_map = dict()
         self._reverse_cache_max_size_ratio = 0.1
 

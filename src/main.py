@@ -13,7 +13,7 @@ from datastructures.general_datastructures import KnockoutGeneSet, SymbolEntrezg
 
 
 
-# If node in 2 has less liquid than same node in 1, then the distance grew, and will be positive
+# order of propagaters matter - increases in liquid from first to second will be counted as positive, decreases as negative
 def measure_propagation_distances(propagater1, propagater2, l2_distance=True):
     distance_dict = {}
     if l2_distance:
@@ -41,7 +41,7 @@ def measure_gene_knockout_impact(graph, knockout_gene_sets, confidence_coef,
     if prior_set_ids is None:
         prior_set = {node for node in graph.nodes if is_cov_protein(node)}
     else:
-        protein_set = {Protein(id=prior_id) for prior_id in prior_set_ids}
+        prior_set = {Protein(id=prior_id) for prior_id in prior_set_ids}
 
     propagater = Propagater(graph, confidence_coef, halt_condition_gap=halt_condition_gap)
     print("propagating original graph")
@@ -107,7 +107,7 @@ def compare_priorities(knockout_gene_sets, *propagation_distance_dicts, top_k=10
 
 def generate_knockout_profiles_from_drugs():
     drugbank_data = DrugBankProteinTargetsData()
-    drugbank_data.init_from_file(r'C:\studies\thesis\code\NetProp\data\all_drugbank_drug_targets.csv')
+    drugbank_data.init_from_file(r'../data/all_drugbank_drug_targets.csv')
     drug_to_target_map = drugbank_data.get_human_drug_protein_targets()
     symbol_entrezgene_map = SymbolEntrezgeneMap()
     profiles_list = []
@@ -138,19 +138,18 @@ if __name__ == "__main__":
 
     prop = Propagater(human_ppi, 0.9)
     prop.propagate(prior_set)
-    p_list = sorted(list(node for node in prop.graph.nodes if not is_cov_protein(node)),
-                    key=lambda node: sum(node.liquids.values()), reverse=True)[:50]
+    # p_list = sorted(list(node for node in prop.graph.nodes if not is_cov_protein(node)),
+    #                 key=lambda node: sum(node.liquids.values()), reverse=True)[:50]
     # knockout_gene_ids = [{p.id} for p in p_list]
     # knockout_gene_ids = []
     # for i in range(len(p_list)):
     #     knockout_gene_ids.extend([{p_list[i].id, p_list[j].id} for j in range(i + 1, len(p_list))])
     knockout_gene_sets = generate_knockout_profiles_from_drugs()
-    gene_knockout_distance_dicts = measure_gene_knockout_impact(human_ppi, knockout_gene_sets[:2], 0.9)
-    rankings = compare_priorities(knockout_gene_sets,
-                                  ["l1_distance_dict", gene_knockout_distance_dicts[0]],
-                                  ["l2_distance_dict", gene_knockout_distance_dicts[1]])
+    for i in range(int(len(knockout_gene_sets)/100)):
+        gene_knockout_distance_dicts = measure_gene_knockout_impact(human_ppi, knockout_gene_sets[100*i:100*(i+1)], 0.9)
+        rankings = compare_priorities(knockout_gene_sets,
+                                      ["l1_distance_dict", gene_knockout_distance_dicts[0]],
+                                      ["l2_distance_dict", gene_knockout_distance_dicts[1]])
 
-    with open(r'../results/sample_drug_oriented.json', "w") as handler:
-        json.dump(rankings, handler, indent=4)
-
-    jhgf  = 9
+        with open(r'../results/drugs {} to {}.json'.format(100*i, 100*(i+1)), "w") as handler:
+            json.dump(rankings, handler, indent=4)

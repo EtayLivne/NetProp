@@ -6,9 +6,8 @@ from functools import total_ordering
 @total_ordering
 class Protein:
     id: int
-    liquids: dict = field(default_factory=dict)
     source_of: set = field(default_factory=set)
-    rank: int = 0
+    target_of: set = field(default_factory=set)
 
     def __hash__(self):
         return self.id
