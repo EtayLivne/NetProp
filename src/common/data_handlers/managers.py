@@ -3,7 +3,8 @@ import networkx as nx
 from common.data_classes.data_classes import Protein
 from core.data_handlers.managers import AbstractDataManager
 from common.data_handlers.extractors import HSapiensExtractor, CSVExtractor, NDEXExtractor, GeneInfoExtractor
-
+from common.data_classes.data_classes import HUMAN_SPECIES_NAME
+from propagater import PropagationGraph, PropagationContainer
 
 
 class HSapiensManager(AbstractDataManager):
@@ -18,13 +19,14 @@ class HSapiensManager(AbstractDataManager):
         if raw:
             return raw_data
 
-        graph = nx.DiGraph()
+        graph = PropagationGraph()
         for triplet in raw_data:
             source_node, target_node, edge_weight = triplet
             graph.add_edge(source_node, target_node, weight=float(edge_weight))
             for node_id in [source_node, target_node]:
-                if not g.nodes[node_id]:
-                    g.nodes[node_id]["protein_data"] = Protein(id=int(node_id))
+                if not graph.nodes[node_id]:
+                    graph.nodes[node_id][graph.CONTAINER_PROPERTIES_KEY] = Protein(id=int(node_id),
+                                                                                   species=HUMAN_SPECIES_NAME)
 
         return graph
 

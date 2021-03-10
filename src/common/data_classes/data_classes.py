@@ -1,22 +1,13 @@
 from dataclasses import dataclass, field
 from functools import total_ordering
+from propagater import PropagationContainer
 
+HUMAN_SPECIES_NAME = "human"
+COVID_19_SPECIES_NAME = "covid"
 
-@dataclass(frozen=False)
-@total_ordering
-class Protein:
-    id: int
-    source_of: set = field(default_factory=set)
-    target_of: set = field(default_factory=set)
-
-    def __hash__(self):
-        return self.id
-
-    def __eq__(self, other):
-        return self.id == other.id
-
-    def __lt__(self, other):
-        return self.liquid < other.liquid
+@dataclass()
+class Protein(PropagationContainer):
+    species: str = HUMAN_SPECIES_NAME
 
 
 @dataclass()

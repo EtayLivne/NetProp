@@ -37,7 +37,7 @@ def measure_propagation_distances(propagater1, propagater2, l2_distance=True):
 
 
 def measure_gene_knockout_impact(graph, knockout_gene_sets, confidence_coef,
-                                 halt_condition_gap=Propagater._DEFUALT_HALT_CONDITION_GAP, prior_set_ids=None):
+                                 halt_condition_gap=Propagater._DEFAULT_HALT_CONDITION_GAP, prior_set_ids=None):
     if prior_set_ids is None:
         prior_set = {node for node in graph.nodes if is_cov_protein(node)}
     else:
