@@ -25,7 +25,7 @@ class BaseFileDataExtractor(AbstractDataExtractor, metaclass=ABCMeta):
         if file_path:
             self.file_path = file_path
         self._validate_path()
-        self._extract()
+        return self._extract()
 
 
 class AbstractWebAPIDataExtractor(AbstractDataExtractor, metaclass=ABCMeta):

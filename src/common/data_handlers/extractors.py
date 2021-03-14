@@ -8,7 +8,7 @@ from core.data_handlers.extractors import BaseFileDataExtractor, AbstractWebAPID
 class HSapiensExtractor(BaseFileDataExtractor):
     def _extract(self):
         with open(self.file_path, 'r') as handler:
-            return [line.split() for line in handler.readlines()]
+            return [line.split()[:3] for line in handler.readlines()]
 
 
 class CSVExtractor(BaseFileDataExtractor):

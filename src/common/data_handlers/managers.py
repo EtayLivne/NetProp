@@ -19,16 +19,18 @@ class HSapiensManager(AbstractDataManager):
         if raw:
             return raw_data
 
-        graph = PropagationGraph()
+        human_graph = PropagationGraph()
         for triplet in raw_data:
-            source_node, target_node, edge_weight = triplet
-            graph.add_edge(source_node, target_node, weight=float(edge_weight))
+            source_node, target_node, edge_weight = int(triplet[0]), int(triplet[1]), float(triplet[2])
+            # if source_node != 1:
+            #     continue
+            human_graph.add_edge(source_node, target_node, weight=edge_weight)
             for node_id in [source_node, target_node]:
-                if not graph.nodes[node_id]:
-                    graph.nodes[node_id][graph.CONTAINER_PROPERTIES_KEY] = Protein(id=int(node_id),
-                                                                                   species=HUMAN_SPECIES_NAME)
+                if not human_graph.nodes[node_id]:
+                    human_graph.nodes[node_id][human_graph.CONTAINER_PROPERTIES_KEY] = \
+                        Protein(id=node_id, species=HUMAN_SPECIES_NAME)
 
-        return graph
+        return human_graph
 
 
 class NDEXManager(AbstractDataManager):
@@ -60,4 +62,3 @@ class DrugbankTargetsManager(AbstractDataManager):
         if raw:
             return raw_data
         # TODO finish after defining data class for drugbank target information
-
