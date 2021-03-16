@@ -1,6 +1,7 @@
 import json
 from math import sqrt, pow
-
+import re
+from multiprocessing import Process
 from numpy import sign
 from random import choice
 import json
@@ -193,7 +194,40 @@ def prior_set_from_json(path_to_json, prior_set_identifier):
     return [int(result['entrezgene']) for result in query_results]
 
 
+def propagate_on_random_networks(variant_name, with_ph):
+    ph_modified_name = "ph_" + variant_name if with_ph else variant_name
+    variant_prior_sets_file_name = "ph_variant_prior_sets" if with_ph else "variant_prior_sets"
+    output_dir = r'C:\studies\code\NetProp\results\variants_blitz\randomized_networks_propagations\{}'.format(ph_modified_name)
+    data_dir = r'C:\studies\code\NetProp\results\variants_blitz\randomized_networks'
+    variant_prior_set = prior_set_from_json(r"C:\studies\code\NetProp\data\variants_blitz\{}.json".format(variant_prior_sets_file_name),
+                                            f"{variant_name}")
+    for randomized_human_ppi_file in os.listdir(data_dir):
+        num = (re.findall("\d+", randomized_human_ppi_file))[-1]
+        if not num:
+            continue
+        if int(num) < 74:
+            continue
+        h_sapiens_file_path = data_dir + f"\\{randomized_human_ppi_file}"
+        h_sapiens = HSapiensManager(h_sapiens_file_path)
+        human_ppi = h_sapiens.get_data()
+        problems = []
+        for gene_id in variant_prior_set:
+            try:
+                human_ppi.nodes[gene_id][PropagationGraph.CONTAINER_PROPERTIES_KEY].source_of = {"liquid"}
+            except KeyError:
+                print(f"gene {gene_id} for prior set does not, in fact, appear to be a human gene")
+                problems.append(gene_id)
+        print(f"ignored the following genes: {problems}")
+        variant_prior_set = [gene_id for gene_id in variant_prior_set if gene_id not in problems]
 
+        prop = Propagater(human_ppi, 0.1)
+        prop.propagate(variant_prior_set)
+        node_tuples = sorted([(node, data[prop._LIQUIDS]["liquid"]) for node, data in prop.graph.nodes(data=True)],
+                             key=lambda x: x[1], reverse=True)
+        output_path = output_dir + f"\\{ph_modified_name}_{randomized_human_ppi_file}.json"
+        with open(output_path, 'w') as handler:
+            json.dump([{"gene_id": node_tuple[0], "liquid": node_tuple[1], "in_prior_set": node_tuple[0] in variant_prior_set} for node_tuple in node_tuples], handler, indent=4)
+        print("yo")
 
 
 if __name__ == "__main__":
@@ -242,36 +276,39 @@ if __name__ == "__main__":
     # print("yo")
 
     ######### generating randomized networks for p value test #########
-    for i in range(26):
-        randomized_network = randomize_h_sapiens()
-        file_path = r'C:\studies\code\NetProp\results\variants_blitz\randomized_networks\randomized_h_sapiens_{}.net'.format(74 + i)
-        with open(file_path, 'w') as handler:
-            for edge in randomized_network.edges(data=True):
-                handler.write(f'{edge[0]} {edge[1]} {edge[2]["weight"]} 0\n')
-        print(f"\n\n********done writing file {i}********\n\n")
+        # for i in range(26):
+        # randomized_network = randomize_h_sapiens()
+        # file_path = r'C:\studies\code\NetProp\results\variants_blitz\randomized_networks\randomized_h_sapiens_{}.net'.format(74 + i)
+        # with open(file_path, 'w') as handler:
+        #     for edge in randomized_network.edges(data=True):
+        #         handler.write(f'{edge[0]} {edge[1]} {edge[2]["weight"]} 0\n')
+        # print(f"\n\n********done writing file {i}********\n\n")
+    
+
+
 
 
     ######### propagating on human ppi with actual variant differentiated genes as prior set #########
-    # variant_prior_set = prior_set_from_json(r"C:\studies\code\NetProp\data\variants_blitz\variant_prior_sets.json", "EU120A")
-    # h_sapiens = HSapiensManager(r"C:\studies\code\NetProp\data\H_sapiens.net")
-    # human_ppi = h_sapiens.get_data()
-    # problems = []
-    # for gene_id in variant_prior_set:
-    #     try:
-    #         human_ppi.nodes[gene_id][PropagationGraph.CONTAINER_PROPERTIES_KEY].source_of = {"liquid"}
-    #     except KeyError:
-    #         print(f"gene {gene_id} for prior set does not, in fact, appear to be a human gene")
-    #         problems.append(gene_id)
-    # print(f"ignored the following genes: {problems}")
-    # variant_prior_set = [gene_id for gene_id in variant_prior_set if gene_id not in problems]
-    #
-    # prop = Propagater(human_ppi, 0.1)
-    # prop.propagate(variant_prior_set)
-    # node_tuples = sorted([(node, data[prop._LIQUIDS]["liquid"]) for node, data in prop.graph.nodes(data=True)],
-    #                      key=lambda x: x[1], reverse=True)
-    # with open('EU120A_output.json', 'w') as handler:
-    #     json.dump([{"gene_id": node_tuple[0], "liquid": node_tuple[1], "in_prior_set": node_tuple[0] in variant_prior_set} for node_tuple in node_tuples], handler, indent=4)
-    # print("yo")
+    variant_prior_set = prior_set_from_json(r"C:\studies\code\NetProp\data\variants_blitz\ph_variant_prior_sets.json", "VIC")
+    h_sapiens = HSapiensManager(r"C:\studies\code\NetProp\data\H_sapiens.net")
+    human_ppi = h_sapiens.get_data()
+    problems = []
+    for gene_id in variant_prior_set:
+        try:
+            human_ppi.nodes[gene_id][PropagationGraph.CONTAINER_PROPERTIES_KEY].source_of = {"liquid"}
+        except KeyError:
+            print(f"gene {gene_id} for prior set does not, in fact, appear to be a human gene")
+            problems.append(gene_id)
+    print(f"ignored the following genes: {problems}")
+    variant_prior_set = [gene_id for gene_id in variant_prior_set if gene_id not in problems]
+
+    prop = Propagater(human_ppi, 0.1)
+    prop.propagate(variant_prior_set)
+    node_tuples = sorted([(node, data[prop._LIQUIDS]["liquid"]) for node, data in prop.graph.nodes(data=True)],
+                         key=lambda x: x[1], reverse=True)
+    with open('ph_VIC_output.json', 'w') as handler:
+        json.dump([{"gene_id": node_tuple[0], "liquid": node_tuple[1], "in_prior_set": node_tuple[0] in variant_prior_set} for node_tuple in node_tuples], handler, indent=4)
+    print("yo")
 
 
     ######### propagating on human ppi with actual variant differentiated genes as prior set, on randomized networks #########
@@ -280,6 +317,8 @@ if __name__ == "__main__":
     # variant_prior_set = prior_set_from_json(r"C:\studies\code\NetProp\data\variants_blitz\variant_prior_sets.json",
     #                                         "EU120A")
     # for randomized_human_ppi_file in os.listdir(data_dir):
+    #     if "super" not in randomized_human_ppi_file:
+    #         continue
     #     h_sapiens_file_path = data_dir + f"\\{randomized_human_ppi_file}"
     #     h_sapiens = HSapiensManager(h_sapiens_file_path)
     #     human_ppi = h_sapiens.get_data()
@@ -307,6 +346,9 @@ if __name__ == "__main__":
     # variant_prior_set = prior_set_from_json(r"C:\studies\code\NetProp\data\variants_blitz\ph_variant_prior_sets.json",
     #                                         "Kent")
     # for randomized_human_ppi_file in os.listdir(data_dir):
+    #     num = (re.findall("\d+", randomized_human_ppi_file))[0]
+    #     if not num or int(num) < 74:
+    #         continue
     #     h_sapiens_file_path = data_dir + f"\\{randomized_human_ppi_file}"
     #     h_sapiens = HSapiensManager(h_sapiens_file_path)
     #     human_ppi = h_sapiens.get_data()
@@ -337,6 +379,9 @@ if __name__ == "__main__":
     #     r"C:\studies\code\NetProp\data\variants_blitz\ph_variant_prior_sets.json",
     #     "VIC")
     # for randomized_human_ppi_file in os.listdir(data_dir):
+    #     num = (re.findall("\d+", randomized_human_ppi_file))[0]
+    #     if not num or int(num) < 74:
+    #         continue
     #     h_sapiens_file_path = data_dir + f"\\{randomized_human_ppi_file}"
     #     h_sapiens = HSapiensManager(h_sapiens_file_path)
     #     human_ppi = h_sapiens.get_data()
@@ -361,3 +406,23 @@ if __name__ == "__main__":
     #                     "in_prior_set": node_tuple[0] in variant_prior_set} for node_tuple in node_tuples],
     #                   handler, indent=4)
     #     print("yo")
+
+    ######### multiprocessed propagating on human ppi with actual variant differentiated genes as prior set, on randomized networks #########
+    # p4 = Process(target=propagate_on_random_networks, args=("EU120", True))
+    # p5 = Process(target=propagate_on_random_networks, args=("Kent", True))
+    # p6 = Process(target=propagate_on_random_networks, args=("VIC", True))
+    # p4.start()
+    # p5.start()
+    # p6.start()
+    # p4.join()
+    # p5.join()
+    # p6.join()
+    # p1 = Process(target=propagate_on_random_networks, args=("EU120", False))
+    # p2 = Process(target=propagate_on_random_networks, args=("Kent", False))
+    # p3 = Process(target=propagate_on_random_networks, args=("VIC", False))
+    # p1.start()
+    # p2.start()
+    # p3.start()
+    # p1.join()
+    # p2.join()
+    # p3.join()
