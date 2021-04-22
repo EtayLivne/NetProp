@@ -25,6 +25,11 @@ class PropagationContainer:
         return self.id < other.id
 
 
+class PropagationResult(PropagationContainer):
+    liquids: set = field(default_factory=set)
+    in_prior_set: bool
+
+
 class PropagationGraph(nx.Graph):
     CONTAINER_PROPERTIES_KEY = "container_properties"
 
@@ -98,15 +103,16 @@ class Propagater:
         else:
             if self._edges_are_normalized:
                 raise PropagationError("May not normalize edges in graph that are already normalized")
-            debug_counter = 0
+
+            # degree dict for runtime efficiency (access node degree quickly instead of calculating it again for each edge)
+            node_degree = {n: self.graph.degree(n) for n in self.graph.nodes()}
             for node_1, node_2, data in self.graph.edges(data=True):
-                norm_factor = sqrt(self.graph.degree(node_1) + self.graph.degree(node_2))
-                confidence_coef = (1 - self.source_confidence_coef) if apply_confidence_coef else 1
                 data[self._UNNORMALIZED_EDGE_WEIGHT] = data[self._EDGE_WEIGHT]
-                data[self._EDGE_WEIGHT] *= confidence_coef / (norm_factor**2)
-                if debug_counter % 1000 == 0:
-                    print(f'debug counter: {debug_counter}')
-                debug_counter += 1
+
+                edge_confidence_coef = float(1 - self.source_confidence_coef) if apply_confidence_coef else 1.0
+                norm_factor = node_degree(node_1) + node_degree(node_2)
+                data[self._EDGE_WEIGHT] *= edge_confidence_coef / norm_factor
+
             self._edges_are_normalized = True
 
     def _get_prev_liquid(self, node, liquid_type):
@@ -144,24 +150,23 @@ class Propagater:
             data[self._LIQUIDS].update(reset_dict)
 
     # Stores a snapshot of current liquid amount in each node into the node's prev_liquid property
-    def _snapshot_to_prev_liquid(self, node, liquid_types):
-        data = self.graph.nodes[node]
-        data[self._PREV_LIQUIDS].update({liquid_type: liquid for liquid_type, liquid in data[self._LIQUIDS].items()
-                                         if liquid_type in liquid_types})
+    def _snapshot_to_prev_liquid(self, nodes, liquid_types):
+        for node in nodes:
+            data = self.graph.nodes[node]
+            for liquid_type in data[self._LIQUIDS]:
+                if liquid_type in liquid_types:
+                    data[self._PREV_LIQUIDS][liquid_type] = data[self._LIQUIDS][liquid_type]
 
     def _propagate_once(self, subgraph, prior_set_subgraph, liquid_types):
-        for node in subgraph:
-            self._snapshot_to_prev_liquid(node, liquid_types=liquid_types)
+        self._snapshot_to_prev_liquid(subgraph.nodes, liquid_types=liquid_types)
 
         for node_data in subgraph.nodes(data=True):
             node, data = node_data
-            if not subgraph.degree(node):
-                continue
             neighbors = subgraph.neighbors(node)
-            data[self._LIQUIDS].\
-                update({liquid_type: sum(subgraph.nodes[neighbor][self._PREV_LIQUIDS][liquid_type] * subgraph[node][neighbor][self._EDGE_WEIGHT]
-                                         for neighbor in neighbors)
-                        for liquid_type in liquid_types})
+            for l_t in liquid_types:
+                data[self._LIQUIDS][l_t] = \
+                    sum(subgraph.nodes[neighbor][self._PREV_LIQUIDS][l_t] * subgraph[node][neighbor][self._EDGE_WEIGHT]
+                        for neighbor in neighbors)
 
         # Refill prior set
         for node, data in prior_set_subgraph.nodes(data=True):
@@ -191,7 +196,6 @@ class Propagater:
         gaps = {liquid_type: 10*self.halt_condition_gap for liquid_type in liquid_types}
         check_for_gaps_counter = 1
         while True:
-            print("number of prop iterations: {}".format(check_for_gaps_counter))
             discovered_subgraph = nx.subgraph(self.graph, discovered_subgraph_nodes)
             self._propagate_once(discovered_subgraph, prior_set_subgraph, liquid_types)
 
@@ -201,7 +205,6 @@ class Propagater:
                                         for node, data in discovered_subgraph.nodes(data=True)))
                 if max(gaps.values()) < self.halt_condition_gap:
                     break
-                print(f'smallest gap is: {min(gaps.values())}')
             check_for_gaps_counter += 1
 
             if len(self.graph) > len(discovered_subgraph):

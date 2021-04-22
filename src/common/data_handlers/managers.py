@@ -2,9 +2,10 @@ import networkx as nx
 
 from common.data_classes.data_classes import Protein
 from core.data_handlers.managers import AbstractDataManager
-from common.data_handlers.extractors import HSapiensExtractor, CSVExtractor, NDEXExtractor, GeneInfoExtractor
+from common.data_handlers.extractors import HSapiensExtractor, CSVExtractor, NDEXExtractor, GeneInfoExtractor,\
+                                            JsonExtractor
 from common.data_classes.data_classes import HUMAN_SPECIES_NAME
-from propagater import PropagationGraph, PropagationContainer
+from propagater import PropagationGraph, PropagationResult
 
 
 class HSapiensManager(AbstractDataManager):
@@ -22,8 +23,6 @@ class HSapiensManager(AbstractDataManager):
         human_graph = PropagationGraph()
         for triplet in raw_data:
             source_node, target_node, edge_weight = int(triplet[0]), int(triplet[1]), float(triplet[2])
-            # if source_node != 1:
-            #     continue
             human_graph.add_edge(source_node, target_node, weight=edge_weight)
             for node_id in [source_node, target_node]:
                 if not human_graph.nodes[node_id]:
@@ -62,3 +61,23 @@ class DrugbankTargetsManager(AbstractDataManager):
         if raw:
             return raw_data
         # TODO finish after defining data class for drugbank target information
+
+
+class PropagationResultsManager(AbstractDataManager):
+    def __init__(self, file_path=None, propagation_results=None):
+        self.extractor = JsonExtractor(file_path=file_path)
+        self.propagation_results = propagation_results or []
+
+    def reload_from_file(self, file_path=None):
+        self.propagation_results = self.extractor.extract(file_path=file_path)
+
+    def _get_raw_data(self, reload_from_file=False):
+        if reload_from_file:
+            self.reload_from_file()
+        return self.propagation_results
+
+    def get_data(self, raw=False):
+        return self.propagation_results
+
+    def dump_to_file(self, file_path):
+        self.extractor.dump(self.propagation_results, file_path)

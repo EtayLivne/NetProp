@@ -15,119 +15,6 @@ from common.data_handlers.managers import HSapiensManager
 from common.data_handlers.extractors import GeneInfoExtractor
 
 
-
-
-
-# order of propagaters matter - increases in liquid from first to second will be counted as positive, decreases as negative
-def measure_propagation_distances(propagater1, propagater2, l2_distance=True):
-    distance_dict = {}
-    if l2_distance:
-        def distance_function(x, y):
-            return sign(x-y)*pow((x-y), 2)
-    else:
-        def distance_function(x, y):
-            return x - y
-
-    propagater2_nodes = {node.id: node for node in propagater2.graph.nodes}
-    for node in propagater1.graph.nodes:
-        if node.id in propagater2_nodes:
-            for liquid_type, liquid in node.liquids.items():
-                distance_dict[liquid_type] = distance_dict.get(liquid_type, 0) + \
-                                             distance_function(liquid, propagater2_nodes[node.id].liquids.get(liquid_type, 0))
-
-    for liquid_type in distance_dict:
-        distance_dict[liquid_type] = sign(distance_dict[liquid_type]) * sqrt(abs(distance_dict[liquid_type]))
-
-    return distance_dict
-
-
-def measure_gene_knockout_impact(graph, knockout_gene_sets, confidence_coef,
-                                 halt_condition_gap=Propagater._DEFAULT_HALT_CONDITION_GAP, prior_set_ids=None):
-    if prior_set_ids is None:
-        prior_set = {node for node in graph.nodes if is_cov_protein(node)}
-    else:
-        prior_set = {Protein(id=prior_id) for prior_id in prior_set_ids}
-
-    propagater = Propagater(graph, confidence_coef, halt_condition_gap=halt_condition_gap)
-    print("propagating original graph")
-    propagation_distance_dict_l1 = dict()
-    propagation_distance_dict_l2 = dict()
-    propagater.propagate(prior_set)
-    print("done propagating original graph")
-    print(f'There are {len(knockout_gene_sets)} knockouts to measure')
-    i = 0
-    for knockout_gene_set in knockout_gene_sets:
-        i = i + 1
-        knockout_propagater = propagater.gene_knockout_copy(knockout_gene_set.gene_set)
-        print(f'beginning propagation on network that knocked out {knockout_gene_set.name}')
-        knockout_propagater.propagate(prior_set)
-        print(f'done with knockout {i} out of {len(knockout_gene_sets)}')
-        propagation_distance_dict_l1[str(knockout_gene_set.name)] = \
-            measure_propagation_distances(propagater, knockout_propagater, l2_distance=False)
-        propagation_distance_dict_l2[str(knockout_gene_set.name)] = \
-            measure_propagation_distances(propagater, knockout_propagater)
-
-    return propagation_distance_dict_l1, propagation_distance_dict_l2
-
-
-def prioritize_knockout_gene_sets(propagation_distance_dict, l2_distance=True):
-    if l2_distance:
-        def norm(distances):
-            sum_with_signs = sum(sign(d) * pow(d, 2) for d in distances)
-
-            return sign(sum_with_signs) * sqrt(abs(sum_with_signs))
-    else:
-        def norm(distances):
-            return sum(d for d in distances)
-
-    return sorted([(knockout_set, norm(distances.values()), distances) for knockout_set, distances in propagation_distance_dict.items()],
-                  key=lambda item: item[1], reverse=True)
-
-
-def compare_priorities(knockout_gene_sets, *propagation_distance_dicts, top_k=100):
-
-    rankings_dict = dict()
-    for d in propagation_distance_dicts:
-        distance_dict_name = d[0]
-        distance_dict = d[1]
-        l1_ranking = prioritize_knockout_gene_sets(distance_dict, l2_distance=False)
-        l2_ranking = prioritize_knockout_gene_sets(distance_dict)
-        rankings_dict[distance_dict_name] = {
-            f'top_{top_k}_l1_distances': [{
-                    f'norm': e[1],
-                    f'distances': e[2],
-                    "knocked_genes_entrezids": e[0],
-                    "knockout_gene_ids": list(next(gs for gs in knockout_gene_sets if gs.name==e[0]).gene_set)
-            } for e in l1_ranking[:top_k]],
-            f'top_{top_k}_l2_distances': [{
-                    f'norm': e[1],
-                    f'distances': e[2],
-                    "knocked_genes_entrezids": e[0],
-                    "knockout_gene_ids": list(next(gs for gs in knockout_gene_sets if gs.name==e[0]).gene_set)
-            } for e in l2_ranking[:top_k]],
-        }
-
-    return rankings_dict
-
-
-def generate_knockout_profiles_from_drugs():
-    drugbank_data = DrugBankProteinTargetsData()
-    drugbank_data.init_from_file(r'../data/all_drugbank_drug_targets.csv')
-    drug_to_target_map = drugbank_data.get_human_drug_protein_targets()
-    symbol_entrezgene_map = SymbolEntrezgeneMap()
-    profiles_list = []
-    for drug, targets in drug_to_target_map.items():
-        gene_set = set()
-        for target in targets:
-            try:
-                gene_set.add(symbol_entrezgene_map.get_entrezgene(target))
-            except KeyError:
-                pass
-        profiles_list.append(KnockoutGeneSet(name=drug, gene_set=gene_set))
-
-    return profiles_list
-
-
 def generate_rank_equivalent_random_network(network):
     edges_to_switch = 10 * len(list(network.edges))
     switch_types = ["place", "target", "source"]
@@ -142,7 +29,7 @@ def generate_rank_equivalent_random_network(network):
         while True:
             source_2 = choice(edge_source_sample)
             target_2 = choice(list(network.neighbors(source_2)))
-            if source_2 not in random_edge_1 and target_2 not in  random_edge_1:
+            if source_2 in random_edge_1 or target_2 in random_edge_1:
                 break
         random_edge_2 = (source_2, target_2)
         random_edge_2_attrs = dict(network.edges[random_edge_2])
@@ -169,8 +56,6 @@ def generate_rank_equivalent_random_network(network):
             network.add_edge(random_edge_1[0], random_edge_2[1], **random_edge_2_attrs)
 
         edges_to_switch -= 1
-        if edges_to_switch % 1000 == 0:
-            print(f'{edges_to_switch} edges remain to switch')
 
 
 def randomize_h_sapiens():
@@ -194,63 +79,15 @@ def prior_set_from_json(path_to_json, prior_set_identifier):
     return [int(result['entrezgene']) for result in query_results]
 
 
-def propagate_on_random_networks(variant_name, with_ph):
-    ph_modified_name = "ph_" + variant_name if with_ph else variant_name
-    variant_prior_sets_file_name = "ph_variant_prior_sets" if with_ph else "variant_prior_sets"
-    output_dir = r'C:\studies\code\NetProp\results\variants_blitz\randomized_networks_propagations\{}'.format(ph_modified_name)
-    data_dir = r'C:\studies\code\NetProp\results\variants_blitz\randomized_networks'
-    variant_prior_set = prior_set_from_json(r"C:\studies\code\NetProp\data\variants_blitz\{}.json".format(variant_prior_sets_file_name),
-                                            f"{variant_name}")
-    for randomized_human_ppi_file in os.listdir(data_dir):
-        num = (re.findall("\d+", randomized_human_ppi_file))[-1]
-        if not num:
-            continue
-        if int(num) < 74:
-            continue
-        h_sapiens_file_path = data_dir + f"\\{randomized_human_ppi_file}"
-        h_sapiens = HSapiensManager(h_sapiens_file_path)
-        human_ppi = h_sapiens.get_data()
-        problems = []
-        for gene_id in variant_prior_set:
-            try:
-                human_ppi.nodes[gene_id][PropagationGraph.CONTAINER_PROPERTIES_KEY].source_of = {"liquid"}
-            except KeyError:
-                print(f"gene {gene_id} for prior set does not, in fact, appear to be a human gene")
-                problems.append(gene_id)
-        print(f"ignored the following genes: {problems}")
-        variant_prior_set = [gene_id for gene_id in variant_prior_set if gene_id not in problems]
+def generic_propagate_on_random_networks(prior_set, prior_set_confidence,
+                                         randomized_networks, output_dir, output_file_name_iterator):
 
-        prop = Propagater(human_ppi, 0.1)
-        prop.propagate(variant_prior_set)
-        node_tuples = sorted([(node, data[prop._LIQUIDS]["liquid"]) for node, data in prop.graph.nodes(data=True)],
-                             key=lambda x: x[1], reverse=True)
-        output_path = output_dir + f"\\{ph_modified_name}_{randomized_human_ppi_file}.json"
-        with open(output_path, 'w') as handler:
-            json.dump([{"gene_id": node_tuple[0], "liquid": node_tuple[1], "in_prior_set": node_tuple[0] in variant_prior_set} for node_tuple in node_tuples], handler, indent=4)
-        print("yo")
-
-
-def generic_propagate_on_random_networks(prior_set, data_dir, output_dir, output_file_name_prefix):
-
-    for randomized_human_ppi_file in os.listdir(data_dir):
-        h_sapiens_file_path = data_dir + f"\\{randomized_human_ppi_file}"
-        h_sapiens = HSapiensManager(h_sapiens_file_path)
-        human_ppi = h_sapiens.get_data()
-        problems = []
-        for gene_id in prior_set:
-            try:
-                human_ppi.nodes[gene_id][PropagationGraph.CONTAINER_PROPERTIES_KEY].source_of = {"liquid"}
-            except KeyError:
-                print(f"gene {gene_id} for prior set does not, in fact, appear to be a human gene")
-                problems.append(gene_id)
-        print(f"ignored the following genes: {problems}")
-        prior_set = [gene_id for gene_id in prior_set if gene_id not in problems]
-
-        prop = Propagater(human_ppi, 0.1)
+    for randomized_network in randomized_networks:
+        prop = Propagater(randomized_network, prior_set_confidence)
         prop.propagate(prior_set)
         node_tuples = sorted([(node, data[prop._LIQUIDS]["liquid"]) for node, data in prop.graph.nodes(data=True)],
                              key=lambda x: x[1], reverse=True)
-        output_path = output_dir + f"\\{output_file_name_prefix}_{randomized_human_ppi_file}.json"
+        output_path = output_dir + f"{output_file_name_iterator}"
         with open(output_path, 'w') as handler:
             json.dump([{"gene_id": node_tuple[0], "liquid": node_tuple[1], "in_prior_set": node_tuple[0] in prior_set} for node_tuple in node_tuples], handler, indent=4)
         print("yo")

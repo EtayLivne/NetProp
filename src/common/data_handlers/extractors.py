@@ -22,6 +22,10 @@ class JsonExtractor(BaseFileDataExtractor):
         with open(self.file_path, 'r') as handler:
             return json.load(handler)
 
+    def dump(self, data, file_path):
+        with open(file_path, 'w') as handler:
+            json.dump(data, handler, indent=4)
+
 
 class NDEXExtractor(AbstractWebAPIDataExtractor):
     def __init__(self, server_url=None, network_id=None):
