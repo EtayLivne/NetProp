@@ -1,11 +1,32 @@
 import networkx as nx
 
-from common.data_classes.data_classes import Protein
+from common.data_classes.data_classes import Protein, Config
 from core.data_handlers.managers import AbstractDataManager
 from common.data_handlers.extractors import HSapiensExtractor, CSVExtractor, NDEXExtractor, GeneInfoExtractor,\
-                                            JsonExtractor
+                                            JsonExtractor, YamlExtractor
 from common.data_classes.data_classes import HUMAN_SPECIES_NAME
-from propagater import PropagationGraph, PropagationResult
+from common.propagation_graph import PropagationGraph, PropagationResult
+
+
+class YamlConfigManager(AbstractDataManager):
+    def __init__(self, file_path=None):
+        self._extractor = YamlExtractor(file_path=file_path)
+        self.config = self._init_config()
+
+    def _init_config(self):
+        return Config(self._extractor.extract())
+
+    def _get_raw_data(self):
+        return self._extractor.extract()
+
+    def load_from_file(self, file_path):
+        self._extractor.file_path = file_path
+        self.config = self._init_config()
+
+    def get_data(self, raw=False):
+        if raw:
+            return self._get_raw_data()
+        return self.config
 
 
 class HSapiensManager(AbstractDataManager):
@@ -66,18 +87,23 @@ class DrugbankTargetsManager(AbstractDataManager):
 class PropagationResultsManager(AbstractDataManager):
     def __init__(self, file_path=None, propagation_results=None):
         self.extractor = JsonExtractor(file_path=file_path)
-        self.propagation_results = propagation_results or []
+        self._propagation_results = propagation_results or []
 
-    def reload_from_file(self, file_path=None):
-        self.propagation_results = self.extractor.extract(file_path=file_path)
+    def load_from_file(self, file_path=None):
+        self._propagation_results = self.extractor.extract(file_path=file_path)
+
+    def load_from_propagater(self, propagater):
+        self._propagation_results = propagater.propagation_results
 
     def _get_raw_data(self, reload_from_file=False):
         if reload_from_file:
-            self.reload_from_file()
-        return self.propagation_results
+            self.load_from_file()
+        return self._propagation_results
 
-    def get_data(self, raw=False):
-        return self.propagation_results
+    def get_data(self, raw=False, reload_from_file=False):
+        if raw:
+            return self._get_raw_data(reload_from_file=reload_from_file)
+        return self._propagation_results
 
     def dump_to_file(self, file_path):
-        self.extractor.dump(self.propagation_results, file_path)
+        self.extractor.dump(self._propagation_results, file_path)

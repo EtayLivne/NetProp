@@ -1,5 +1,6 @@
 import csv
 import json
+import yaml
 import ndex2.client
 from mygene import MyGeneInfo
 from core.data_handlers.extractors import BaseFileDataExtractor, AbstractWebAPIDataExtractor
@@ -22,9 +23,21 @@ class JsonExtractor(BaseFileDataExtractor):
         with open(self.file_path, 'r') as handler:
             return json.load(handler)
 
-    def dump(self, data, file_path):
+    @staticmethod
+    def dump(data, file_path):
         with open(file_path, 'w') as handler:
             json.dump(data, handler, indent=4)
+
+
+class YamlExtractor(BaseFileDataExtractor):
+    def _extract(self):
+        with open(self.file_path, 'r') as handler:
+            return yaml.load(handler)
+
+    @staticmethod
+    def dump(data, file_path):
+        with open(file_path, 'w') as handler:
+            yaml.dump(data, handler, indent=4)
 
 
 class NDEXExtractor(AbstractWebAPIDataExtractor):

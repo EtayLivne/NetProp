@@ -1,18 +1,11 @@
-import json
-from math import sqrt, pow
-import re
-from multiprocessing import Process
-from numpy import sign
 from random import choice
-import json
-import os
+from itertools import cycle
+from multiprocessing import Process
+
 from data_extractors import *
-from propagater import Propagater, PropagationContainer, PropagationGraph
-from datastructures.graph_datastructures import is_cov_protein
-from datastructures.drugbank_data import DrugBankProteinTargetsData
-# from datastructures.general_datastructures import KnockoutGeneSet, SymbolEntrezgeneMap, init_symbol_entrezgene_map
 from common.data_handlers.managers import HSapiensManager
 from common.data_handlers.extractors import GeneInfoExtractor
+from propagater import Propagater, PropagationContainer, PropagationGraph
 
 
 def generate_rank_equivalent_random_network(network):
@@ -91,6 +84,42 @@ def generic_propagate_on_random_networks(prior_set, prior_set_confidence,
         with open(output_path, 'w') as handler:
             json.dump([{"gene_id": node_tuple[0], "liquid": node_tuple[1], "in_prior_set": node_tuple[0] in prior_set} for node_tuple in node_tuples], handler, indent=4)
         print("yo")
+
+
+def load_propagation_network(source_file_path):
+    try:
+        manager = HSapiensManager(source_file_path)
+    except:
+        raise (f"failed to read network from file {source_file_path}")
+
+    return manager.get_data()
+
+# TODO april make this the core of a generic way to run propagations!
+def propagation_iter(propagaters_iter, prior_sets_iter, prior_set_confidences_iter=Propagater.DEFAULT_CONFIDENCE_COEF, knockout_sets_iter=None):
+    stopped_iterators = {}
+    knockout_sets_iter = knockout_sets_iter or cycle([None])
+    while True:
+        propagater = next(propagaters_iter, "stopped")
+        knockout_set = next(knockout_sets_iter, "stopped")
+        prior_set = next(prior_sets_iter, "stopped")
+        prior_set_confidence = next(prior_set_confidences_iter, "stopped")
+        stopped_iterators = {i for i in [knockout_set, prior_set, prior_set_confidence] if i == "stopped"}
+        if stopped_iterators:
+            break
+        yield propagater.propagate(prior_set, suppressed_nodes=knockout_set, normalize_flow=False)
+
+    print(f'stopped iteration because the following iterators ran out: {stopped_iterators}')
+
+
+def propagate_on_network(network_file_path, prior_sets, prior_set_confidences, output_dir, knockout_sets=None):
+    network = HSapiensManager(file_path=network_file_path).get_data()
+    prop = Propagater(network, 0)
+    for i in range(min(len(prior_sets)))
+    results_manager = prop.propagate(prior_set, suppressed_nodes=knockout_set)
+    results_manager.dump_to_file(output_file_path)
+
+
+
 
 
 if __name__ == "__main__":
@@ -299,8 +328,8 @@ if __name__ == "__main__":
     #     prop.propagate(variant_prior_set)
     #     node_tuples = sorted([(node, data[prop._LIQUIDS]["liquid"]) for node, data in prop.graph.nodes(data=True)],
     #                          key=lambda x: x[1], reverse=True)
-    #     output_path = output_dir + f"\\ph_EU120_{randomized_human_ppi_file}.json"
-    #     with open(output_path, 'w') as handler:
+    #     output_file_path = output_dir + f"\\ph_EU120_{randomized_human_ppi_file}.json"
+    #     with open(output_file_path, 'w') as handler:
     #         json.dump([{"gene_id": node_tuple[0], "liquid": node_tuple[1], "in_prior_set": node_tuple[0] in variant_prior_set} for node_tuple in node_tuples], handler, indent=4)
     #     print("yo")
 
@@ -329,8 +358,8 @@ if __name__ == "__main__":
     #     prop.propagate(variant_prior_set)
     #     node_tuples = sorted([(node, data[prop._LIQUIDS]["liquid"]) for node, data in prop.graph.nodes(data=True)],
     #                          key=lambda x: x[1], reverse=True)
-    #     output_path = output_dir + f"\\ph_Kent_{randomized_human_ppi_file}.json"
-    #     with open(output_path, 'w') as handler:
+    #     output_file_path = output_dir + f"\\ph_Kent_{randomized_human_ppi_file}.json"
+    #     with open(output_file_path, 'w') as handler:
     #         json.dump([{"gene_id": node_tuple[0], "liquid": node_tuple[1],
     #                     "in_prior_set": node_tuple[0] in variant_prior_set} for node_tuple in node_tuples], handler,
     #                   indent=4)
@@ -363,8 +392,8 @@ if __name__ == "__main__":
     #     node_tuples = sorted(
     #         [(node, data[prop._LIQUIDS]["liquid"]) for node, data in prop.graph.nodes(data=True)],
     #         key=lambda x: x[1], reverse=True)
-    #     output_path = output_dir + f"\\ph_VIC_{randomized_human_ppi_file}.json"
-    #     with open(output_path, 'w') as handler:
+    #     output_file_path = output_dir + f"\\ph_VIC_{randomized_human_ppi_file}.json"
+    #     with open(output_file_path, 'w') as handler:
     #         json.dump([{"gene_id": node_tuple[0], "liquid": node_tuple[1],
     #                     "in_prior_set": node_tuple[0] in variant_prior_set} for node_tuple in node_tuples],
     #                   handler, indent=4)

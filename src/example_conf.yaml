@@ -1,0 +1,27 @@
+# Simplest type of run: single network, single prior and knockout sets. Will create output file named path_to_dir/run_1.json
+- run_1:
+    network: path_to_file
+    prior_set: [1,2,3]
+    knockout_set: [7]
+    prior_set_confidence: 0.1
+    output_dir: path_to_dir
+
+# single network, but list of prior/knockout sets. number of each type of set must match! Note the "repeats" keyword.
+- run_2:
+    network: path_to_file
+    prior_set_confidence: 0.9
+    prior_sets:
+      - {set: [1,2,3], confidence: 0.1}
+      - {set: randomized, set_size: 10}
+      - {set: [2,3,4]}
+      - [3,4,5]
+
+    knockout_sets:
+      - {set: randomized, repeats: 2}
+      - {set: [], repeats: 2}
+    output_dir: path_to_dir
+
+# no such field as an etc, actually. But this works just likes runs 1/2, except operation will repeat for each file in folder. An output subfolder will be created for each network
+- run_3:
+    networks_dir: path_to_dir
+    etc: etc

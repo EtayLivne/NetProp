@@ -1,50 +1,10 @@
-from math import sqrt
-from copy import deepcopy
-from itertools import chain
-from dataclasses import dataclass, field
-from functools import total_ordering
 import networkx as nx
+from math import sqrt
+from itertools import chain
 
-from datastructures.graph_datastructures import Protein
+from common.data_handlers.managers import PropagationResultsManager
+from common.propagation_graph import PropagationResult, PropagationContainer, PropagationGraph
 
-
-@dataclass(frozen=False)
-@total_ordering
-class PropagationContainer:
-    id: int
-    source_of: set = field(default_factory=set)
-    target_of: set = field(default_factory=set)
-
-    def __hash__(self):
-        return self.id
-
-    def __eq__(self, other):
-        return self.id == other.id
-
-    def __lt__(self, other):
-        return self.id < other.id
-
-
-class PropagationResult(PropagationContainer):
-    liquids: set = field(default_factory=set)
-    in_prior_set: bool
-
-
-class PropagationGraph(nx.Graph):
-    CONTAINER_PROPERTIES_KEY = "container_properties"
-
-    @classmethod
-    def node_has_propagation_container(cls, node_properties):
-        return isinstance(node_properties.get(cls.CONTAINER_PROPERTIES_KEY, None), PropagationContainer)
-
-    def is_ready_for_propagation(self):
-        nodes_condition = all(self.node_has_propagation_container(data) for node, data in self.nodes(data=True))
-        if not nodes_condition:
-            return False
-        ids_condition = all(node == data[self.CONTAINER_PROPERTIES_KEY].id for node, data in self.nodes(data=True))
-        edges_condition = all(data.get("weight", -1) > 0 for source, dest, data in self.edges(data=True))
-
-        return nodes_condition and ids_condition and edges_condition
 
 
 class PropagationError(BaseException):
@@ -57,6 +17,7 @@ class Propagater:
     _EDGE_WEIGHT = "weight"
     _UNNORMALIZED_EDGE_WEIGHT = "unnormalized_weight"
     _DEFAULT_HALT_CONDITION_GAP = 10e-5
+    DEFAULT_CONFIDENCE_COEF = 0.1
 
     def __init__(self, propagation_graph, source_condifence_coef, halt_condition_gap=_DEFAULT_HALT_CONDITION_GAP):
         self._validate_parameters(propagation_graph, source_condifence_coef, halt_condition_gap)
@@ -66,6 +27,11 @@ class Propagater:
         self.halt_condition_gap = halt_condition_gap * self.source_confidence_coef
         self._reset_liquids()
         self._edges_are_normalized = False
+        self._propagation_results = None
+
+    @property
+    def propagation_results(self):
+        return self._propagation_results
 
     @staticmethod
     def _validate_parameters(propagation_graph, source_condifence_coef, halt_condition_gap):
@@ -75,12 +41,6 @@ class Propagater:
             raise ValueError("source_confidence_coef must be a number greater than 0 and smaller than 1")
         if not (halt_condition_gap > 0):
             raise ValueError("halt_condition_gap must be a positive number")
-
-    # TODO remove once certain that get_propagation_results makes more sense
-    # def gene_knockout_copy(self, gene_knockout_ids):
-    #     knockout_graph = deepcopy(self.graph)
-    #     knockout_graph.remove_nodes_from({Protein(id=gene_id) for gene_id in gene_knockout_ids})
-    #     return Propagater(knockout_graph, self.source_confidence_coef, halt_condition_gap=self.halt_condition_gap)
 
     def get_propagation_result_record(self):
         return {node_id: node_data for node_id, node_data in self.graph.nodes(data=True)}
@@ -128,12 +88,7 @@ class Propagater:
             self.graph = nx.subgraph(self.graph, [node for node in self.graph.nodes if node not in suppressed_nodes])
         except TypeError:
             raise TypeError("cannot propagate because non-iterable suppressed_nodes provided")
-        self._normalize_edge_weights()
         return g
-
-    def _unsuppress_nodes(self, original_graph_pointer):
-        self.graph = original_graph_pointer
-        self._normalize_edge_weights(reverse=True)
 
     def _reset_liquids(self, nodes=None, liquid_types=None):
         nodes_to_reset = nodes or self.graph.nodes
@@ -182,7 +137,8 @@ class Propagater:
             raise Exception("cannot propagate because "
                             "graph is not a valid propagation graph")
 
-        g = self._suppress_nodes(suppressed_nodes=suppressed_nodes)
+        unsupressed_graph = self._suppress_nodes(suppressed_nodes=suppressed_nodes)
+        self._normalize_edge_weights()
 
         # Incorporate propagation inputs into propagation graph
         prior_set_subgraph = nx.subgraph(self.graph, prior_set)
@@ -211,13 +167,9 @@ class Propagater:
                 newest_subgraph_nodes = set.union(*[set(self.graph.neighbors(node)) for node in newest_subgraph_nodes])
                 discovered_subgraph_nodes.update(newest_subgraph_nodes)
 
-        # TODO - see if this is actually important/needed, if not: delete.
-        # if normalize_flow:
-        #     for liquid_type in liquid_types:
-        #         type_max = max([node.liquids.get(liquid_type, 0) for node in self.graph.nodes if node not in prior_set])
-        #         for node in self.graph.nodes:
-        #             node.liquids[liquid_type] = float(node.liquids.get(liquid_type, 0)) / type_max
-
         # restore suppressed nodes
-        self._unsuppress_nodes(g)
-
+        self.graph = unsupressed_graph
+        self._normalize_edge_weights(reverse=True)
+        self._propagation_results = [PropagationResult(id=n.id, source_of=n.source_of, target_of=n.target_of,
+                                                      liquids= n_data[self._LIQUIDS], in_prior_set= n in prior_set )
+                                     for n, n_data in self.graph.nodes(data=True)]
