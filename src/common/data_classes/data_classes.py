@@ -1,6 +1,9 @@
 from dataclasses import dataclass, field
-from functools import total_ordering
 from propagater import PropagationContainer
+from pydantic import BaseModel
+from typing import List
+
+
 
 HUMAN_SPECIES_NAME = "human"
 COVID_19_SPECIES_NAME = "covid"
@@ -34,3 +37,17 @@ class GeneSet:
 
     def __iter__(self):
         return iter(self.gene_set)
+
+
+class LiquidModel(BaseModel):
+    sources: List
+    targets: List
+
+
+class PropagationPropertiesModel(BaseModel):
+    liquids:
+
+
+class ConfigModel(BaseModel):
+    graph_loading_module: str
+    propagation_properties:
