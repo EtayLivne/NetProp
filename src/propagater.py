@@ -1,12 +1,7 @@
 from math import sqrt
-from copy import deepcopy
 from itertools import chain
 from dataclasses import dataclass, field
-from functools import total_ordering
 import networkx as nx
-
-from datastructures.graph_datastructures import Protein
-
 
 @dataclass(frozen=False)
 class PropagationContainer:
