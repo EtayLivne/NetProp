@@ -44,10 +44,3 @@ class LiquidModel(BaseModel):
     targets: List
 
 
-class PropagationPropertiesModel(BaseModel):
-    liquids:
-
-
-class ConfigModel(BaseModel):
-    graph_loading_module: str
-    propagation_properties:

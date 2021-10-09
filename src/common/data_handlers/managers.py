@@ -5,7 +5,7 @@ from core.data_handlers.managers import AbstractDataManager
 from common.data_handlers.extractors import HSapiensExtractor, CSVExtractor, NDEXExtractor, GeneInfoExtractor,\
                                             JsonExtractor
 from common.data_classes.data_classes import HUMAN_SPECIES_NAME
-from propagater import PropagationGraph, PropagationResult
+from propagater import PropagationNetwork, PropagationResult
 
 
 class HSapiensManager(AbstractDataManager):
@@ -20,13 +20,13 @@ class HSapiensManager(AbstractDataManager):
         if raw:
             return raw_data
 
-        human_graph = PropagationGraph()
+        human_graph = PropagationNetwork()
         for triplet in raw_data:
             source_node, target_node, edge_weight = int(triplet[0]), int(triplet[1]), float(triplet[2])
             human_graph.add_edge(source_node, target_node, weight=edge_weight)
             for node_id in [source_node, target_node]:
                 if not human_graph.nodes[node_id]:
-                    human_graph.nodes[node_id][human_graph.CONTAINER_PROPERTIES_KEY] = \
+                    human_graph.nodes[node_id][human_graph.CONTAINER_KEY] = \
                         Protein(id=node_id, species=HUMAN_SPECIES_NAME)
 
         return human_graph

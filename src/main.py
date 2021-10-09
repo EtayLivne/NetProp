@@ -1,11 +1,16 @@
-
+import json
+from os.path import join as os_path_join
 from random import choice
+from datetime import datetime
 from importlib import import_module
 from data_extractors import *
-from propagater import Propagater
+from propagater import Propagater, PropagationNetwork
 from common.data_handlers.managers import HSapiensManager
 from common.data_handlers.extractors import GeneInfoExtractor
-from config_models import ConfigModel
+from config_models import ConfigModel, PPIModel, HaltConditionOptions
+from results_models import PropagationNetworkModel, PropagationResultModel, HaltConditionOptionModel,\
+                           PropagationProteinModel
+from constants import NodeAttrs
 
 def generate_rank_equivalent_random_network(network):
     edges_to_switch = 10 * len(list(network.edges))
@@ -77,7 +82,7 @@ def generic_propagate_on_random_networks(prior_set, prior_set_confidence,
     for randomized_network in randomized_networks:
         prop = Propagater(randomized_network, prior_set_confidence)
         prop.propagate(prior_set)
-        node_tuples = sorted([(node, data[prop._LIQUIDS]["liquid"]) for node, data in prop.graph.nodes(data=True)],
+        node_tuples = sorted([(node, data[prop._LIQUIDS]["liquid"]) for node, data in prop._network.nodes(data=True)],
                              key=lambda x: x[1], reverse=True)
         output_path = output_dir + f"{output_file_name_iterator}"
         with open(output_path, 'w') as handler:
@@ -85,11 +90,66 @@ def generic_propagate_on_random_networks(prior_set, prior_set_confidence,
         print("yo")
 
 
-def network_form_config(network_config):
+def network_from_config(network_config):
     loader_class = getattr(import_module(network_config.network_loader), "NetworkLoader")
     inputs = network_config.network_loader_input_dict or dict()
     propagation_network = loader_class.load_network(network_config.source_file, **inputs)
+    propagation_network[PPIModel.source_file_key] = network_config.source_file
+    propagation_network[PPIModel.network_id_key] = network_config.network_id
+    propagation_network[PPIModel.protein_id_class_key] = network_config.protein_id_class
+    propagation_network[PPIModel.directed_key] = network_config.directed
+    return propagation_network
 
+
+#TODO add support for suppressed nodes and variable halt conditions
+def record_propagation_result(propagater, suppressed_nodes, file_path):
+    network = PropagationNetworkModel(
+        source_file=propagater.network[PPIModel.source_file_key],
+        network_id=propagater.network[PPIModel.network_id_key],
+        directed=propagater.network[PPIModel.directed_key],
+        suppressed_nodes=suppressed_nodes
+    )
+
+    halt_conditions = []
+    if propagater.max_steps != Propagater.NO_MAX_STEPS:
+        halt_conditions.append(HaltConditionOptionModel(condition_type=HaltConditionOptions.MAX_STEPS.value,
+                                                        max_steps=propagater.max_steps))
+    if propagater.min_gap != Propagater.NO_MIN_GAP:
+        halt_conditions.append(HaltConditionOptionModel(condition_type=HaltConditionOptions.MIN_GAP.value,
+                                                        min_gap=propagater.min_gap))
+
+    nodes = [PropagationProteinModel(
+        source_of=data[PropagationNetwork.CONTAINER_KEY].source_of,
+        target_of=data[PropagationNetwork.CONTAINER_KEY].target_of,
+        liquids=propagater.node_liquids(node),
+        id_type=propagater.network[PPIModel.protein_id_class_key],
+        species=data[NodeAttrs.SPECIES_ID.value]
+    ) for node, data in propagater.network.nodes(data=True) if node not in suppressed_nodes]
+
+    propagation_result = PropagationResultModel(
+        network=network,
+        prior_set_confidence=propagater.source_confidence,
+        halt_conditions=halt_conditions,
+        nodes=nodes
+    )
+
+    with open(file_path, 'w') as json_handler:
+        json.dump(propagation_result.dict(), json_handler)
+
+# TODO add support for configurable halt condition
+def propagate(network, propagation_config, output_dir):
+    max_steps = Propagater.NO_MAX_STEPS
+    min_gap = Propagater.NO_MIN_GAP
+    for halt_condition in propagation_config.halt_conditions:
+        if halt_condition.type == HaltConditionOptions.MIN_GAP.value:
+            min_gap = halt_condition.gap_threshold
+        elif halt_condition == HaltConditionOptions.MAX_STEPS.value:
+            max_steps = halt_condition.number_of_rounds
+    propagater = Propagater(network, propagation_config.prior_set_confidence, max_steps=max_steps, min_gap=min_gap)
+    propagater.propagate(propagation_config.prior_set, propagation_config.target_set)
+
+    id = propagation_config.propagation_id or str(datetime.now())
+    record_propagation_result(propagater, propagation_config.suppressed_set, os_path_join(output_dir, f"{id}.json"))
 
 
 
@@ -98,8 +158,8 @@ def main():
     config = ConfigModel.parse_file(config_path)
     network = network_from_config(config.ppi_config)
     output_dir = config.output_dir_path
-    for propagation in config.propagations:
-        propagate(output_dir, propagation)
+    for propagation_config in config.propagations:
+        propagate(network, propagation_config, output_dir)
 
 
 if __name__ == "__main__":
