@@ -5,7 +5,7 @@ from core.data_handlers.managers import AbstractDataManager
 from common.data_handlers.extractors import HSapiensExtractor, CSVExtractor, NDEXExtractor, GeneInfoExtractor,\
                                             JsonExtractor
 from common.data_classes.data_classes import HUMAN_SPECIES_NAME
-from propagater import PropagationNetwork, PropagationResult
+from propagater import PropagationNetwork
 
 
 class HSapiensManager(AbstractDataManager):

@@ -7,18 +7,18 @@ from core.data_handlers.extractors import BaseFileDataExtractor, AbstractWebAPID
 
 class HSapiensExtractor(BaseFileDataExtractor):
     NODE_ID1 = 0
-    NODEI_D2 = 1
+    NODE_ID2 = 1
     EDGE_WEIGHT = 2
+    ELEMENTS_IN_LINE = 3
 
     def _extract(self):
         with open(self.file_path, 'r') as handler:
-            node_id_1, node_id_2, edge_weight = 0, 1, 2
-            split_lines = [line.split()[:3] for line in handler.readlines()]
-            return [[int(line[self.NODE_ID1]), int(line[self.NODEI_D2]), float(line[self.EDGE_WEIGHT])] for line in split_lines]
+            split_lines = [line.split()[:self.ELEMENTS_IN_LINE] for line in handler.readlines()]
+            return [[line[self.NODE_ID1], line[self.NODE_ID2], float(line[self.EDGE_WEIGHT])] for line in split_lines]
 
     @classmethod
     def unpack_triplet(cls, triplet):
-        return triplet[cls.NODE_ID1], triplet[cls.NODEI_D2], triplet[cls.EDGE_WEIGHT]
+        return triplet[cls.NODE_ID1], triplet[cls.NODE_ID2], triplet[cls.EDGE_WEIGHT]
 
 class CSVExtractor(BaseFileDataExtractor):
     def _extract(self):

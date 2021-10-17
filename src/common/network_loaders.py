@@ -11,10 +11,9 @@ class PPINetworkLoader(BaseNetworkLoader):
 class HSapeinsNetworkLoader(PPINetworkLoader):
     HUMAN_SPECIES_ID = SpeciesIDs.HUMAN.value
 
-
     def __init__(self, network_soruce_path):
         super().__init__(network_soruce_path)
-        self.network_extractor = HSapiensExtractor(self.network_soruce_path)
+        self.network_extractor = HSapiensExtractor(self.network_source_path)
 
     @classmethod
     def _new_node_attrs(cls):
@@ -38,4 +37,5 @@ class HSapeinsNetworkLoader(PPINetworkLoader):
                 if node_id not in network.nodes:
                     network.add_node(node_id, **self._new_node_attrs())
             network.add_edge(source_node, target_node, **self._new_edge_attrs(edge_weight))
+        return network
 

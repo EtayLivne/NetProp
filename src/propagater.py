@@ -109,7 +109,7 @@ class Propagater:
             return False
         return True
 
-    def propagate(self, prior_set, suppressed_nodes=None):
+    def propagate(self, prior_set, suppressed_set=None):
         # validate input
         if not self.validate_propagation_node_sets(self._network, prior_set):
             raise ValueError("Cannot propagate because prior_set refers to nodes that do not exist")
@@ -118,14 +118,14 @@ class Propagater:
             raise PropagationError("No halt condition specified")
 
         # Incorporate propagation inputs into propagation graph
-        self._suppress_nodes(suppressed_nodes=suppressed_nodes)
+        self._suppress_nodes(suppressed_nodes=suppressed_set)
         self._normalize_edge_weights(apply_confidence_coef=True)
         liquid_types = set.union(*[self._network.nodes[node][self._network.CONTAINER_KEY].source_of
                                    for node in prior_set if node in prior_set])
         self._reset_liquids(liquid_types=liquid_types)
 
         # Prepare initial propagation state
-        discovered_subgraph_nodes = prior_set
+        discovered_subgraph_nodes = set(prior_set)
         newest_subgraph_nodes = discovered_subgraph_nodes
         check_for_gaps_counter = 1
         step_counter = 1
@@ -154,7 +154,7 @@ class Propagater:
         self._normalize_edge_weights(reverse=True)
 
     def node_liquids(self, node_id):
-        return self.network[node_id][self._LIQUIDS]
+        return self.network.nodes[node_id][self._LIQUIDS]
 
     def _reset_liquids(self, nodes=None, liquid_types=None):
         # It is possible to reset only a subset of liquids and/or only a subset of nodes. Default is to reset all.
@@ -238,12 +238,3 @@ class Propagater:
     def _gap_size(self, subgraph, liquid_type):
         return sqrt(sum(pow(data[self._LIQUIDS][liquid_type] - data[self._PREV_LIQUIDS][liquid_type], 2)
                                         for node, data in subgraph.nodes(data=True)))
-
-
-network = PropagationNetwork()
-network.add_edge("1", "2")
-network.nodes["1"][network.CONTAINER_KEY] = PropagationContainer(source_of={"liquid"})
-network.nodes["2"][network.CONTAINER_KEY] = PropagationContainer(target_of={"liquid"})
-network["1"]["2"][network.EDGE_WEIGHT] = 1
-p = Propagater(network, 0.5, max_steps=3)
-p.propagate({"1"})

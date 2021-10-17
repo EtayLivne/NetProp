@@ -1,16 +1,26 @@
 import json
+import inspect
+import sys
 from os.path import join as os_path_join
 from random import choice
 from datetime import datetime
 from importlib import import_module
 from data_extractors import *
+import common.network_loaders as network_loaders
+from network_loader import BaseNetworkLoader
 from propagater import Propagater, PropagationNetwork
 from common.data_handlers.managers import HSapiensManager
 from common.data_handlers.extractors import GeneInfoExtractor
-from config_models import ConfigModel, PPIModel, HaltConditionOptions
+from config_models import ConfigModel, PPIModel, PropagationSourceModel, PropagationTargetModel
 from results_models import PropagationNetworkModel, PropagationResultModel, HaltConditionOptionModel,\
                            PropagationProteinModel
 from constants import NodeAttrs
+
+
+#TODO: find reasonable way to enforce set behavior on pyantics models. Currently cannot support sets of models so everything is a list
+# reason for this is that .dict() will convert any member of the set to a dict, but a dict isn't hashable, which then crushes the program
+
+
 
 def generate_rank_equivalent_random_network(network):
     edges_to_switch = 10 * len(list(network.edges))
@@ -90,43 +100,45 @@ def generic_propagate_on_random_networks(prior_set, prior_set_confidence,
         print("yo")
 
 
-def network_from_config(network_config):
-    loader_class = getattr(import_module(network_config.network_loader), "NetworkLoader")
-    inputs = network_config.network_loader_input_dict or dict()
-    propagation_network = loader_class.load_network(network_config.source_file, **inputs)
-    propagation_network[PPIModel.source_file_key] = network_config.source_file
-    propagation_network[PPIModel.network_id_key] = network_config.network_id
-    propagation_network[PPIModel.protein_id_class_key] = network_config.protein_id_class
-    propagation_network[PPIModel.directed_key] = network_config.directed
+def network_from_config(network_config, loader_classes):
+    loader_class = loader_classes.get(network_config.loader_class, None)
+    if not loader_class:
+        raise ValueError(f"No network loader named {network_config.loader_class} detected")
+    loader = loader_class(network_config.source_file)
+    inputs = network_config.loader_input_dict or dict()
+
+    propagation_network = loader.load_network(**inputs)
+    propagation_network.graph[PPIModel.source_file_key] = network_config.source_file
+    propagation_network.graph[PPIModel.id_key] = network_config.id
+    propagation_network.graph[PPIModel.protein_id_class_key] = network_config.protein_id_class
+    propagation_network.graph[PPIModel.directed_key] = network_config.directed
     return propagation_network
 
 
 #TODO add support for suppressed nodes and variable halt conditions
-def record_propagation_result(propagater, suppressed_nodes, file_path):
+def record_propagation_result(propagater, suppressed_nodes, file_path, propagation_id):
     network = PropagationNetworkModel(
-        source_file=propagater.network[PPIModel.source_file_key],
-        network_id=propagater.network[PPIModel.network_id_key],
-        directed=propagater.network[PPIModel.directed_key],
+        source_file=propagater.network.graph[PPIModel.source_file_key],
+        network_id=propagater.network.graph[PPIModel.id_key],
+        directed=propagater.network.graph[PPIModel.directed_key],
         suppressed_nodes=suppressed_nodes
     )
 
-    halt_conditions = []
-    if propagater.max_steps != Propagater.NO_MAX_STEPS:
-        halt_conditions.append(HaltConditionOptionModel(condition_type=HaltConditionOptions.MAX_STEPS.value,
-                                                        max_steps=propagater.max_steps))
-    if propagater.min_gap != Propagater.NO_MIN_GAP:
-        halt_conditions.append(HaltConditionOptionModel(condition_type=HaltConditionOptions.MIN_GAP.value,
-                                                        min_gap=propagater.min_gap))
+    max_steps = propagater.max_steps if propagater.max_steps != propagater.NO_MAX_STEPS else None
+    min_gap = propagater.min_gap if propagater.min_gap != propagater.NO_MIN_GAP else None
+    halt_conditions = HaltConditionOptionModel(max_steps=max_steps, min_gap=min_gap)
 
     nodes = [PropagationProteinModel(
+        id=node,
         source_of=data[PropagationNetwork.CONTAINER_KEY].source_of,
         target_of=data[PropagationNetwork.CONTAINER_KEY].target_of,
         liquids=propagater.node_liquids(node),
-        id_type=propagater.network[PPIModel.protein_id_class_key],
+        id_type=propagater.network.graph[PPIModel.protein_id_class_key],
         species=data[NodeAttrs.SPECIES_ID.value]
     ) for node, data in propagater.network.nodes(data=True) if node not in suppressed_nodes]
 
     propagation_result = PropagationResultModel(
+        id=propagation_id,
         network=network,
         prior_set_confidence=propagater.source_confidence,
         halt_conditions=halt_conditions,
@@ -134,29 +146,44 @@ def record_propagation_result(propagater, suppressed_nodes, file_path):
     )
 
     with open(file_path, 'w') as json_handler:
-        json.dump(propagation_result.dict(), json_handler)
+        json_handler.write(propagation_result.json(indent=4, exclude_none=True))
 
 # TODO add support for configurable halt condition
 def propagate(network, propagation_config, output_dir):
-    max_steps = Propagater.NO_MAX_STEPS
-    min_gap = Propagater.NO_MIN_GAP
-    for halt_condition in propagation_config.halt_conditions:
-        if halt_condition.type == HaltConditionOptions.MIN_GAP.value:
-            min_gap = halt_condition.gap_threshold
-        elif halt_condition == HaltConditionOptions.MAX_STEPS.value:
-            max_steps = halt_condition.number_of_rounds
-    propagater = Propagater(network, propagation_config.prior_set_confidence, max_steps=max_steps, min_gap=min_gap)
-    propagater.propagate(propagation_config.prior_set, propagation_config.target_set)
+    max_steps = propagation_config.halt_conditions.max_steps or Propagater.NO_MAX_STEPS
+    min_gap = propagation_config.halt_conditions.min_gap or Propagater.NO_MIN_GAP
 
-    id = propagation_config.propagation_id or str(datetime.now())
-    record_propagation_result(propagater, propagation_config.suppressed_set, os_path_join(output_dir, f"{id}.json"))
+    prior_set_confidence = propagation_config.prior_set_confidence
+    prior_set, target_set, suppressed_set\
+        = propagation_config.prior_set, propagation_config.target_set, propagation_config.suppressed_set
+
+    for prior, target in zip(prior_set, propagation_config.target_set):
+        network.nodes[prior.id][PropagationNetwork.CONTAINER_KEY].source_of = prior.source_of
+        network.nodes[target.id][PropagationNetwork.CONTAINER_KEY].target_of = target.target_of
+
+    propagater = Propagater(network, prior_set_confidence, max_steps=max_steps, min_gap=min_gap)
+    propagater.propagate([p.id for p in prior_set], suppressed_set=suppressed_set)
+
+    propagation_id = propagation_config.id or network[PPIModel.network_id_key] + "_" + str(datetime.now())
+    record_propagation_result(propagater,
+                              suppressed_set,
+                              os_path_join(output_dir, f"{propagation_id}.json"),
+                              propagation_id)
+
+    for prior, target in zip(prior_set, propagation_config.target_set):
+        network.nodes[prior.id][PropagationNetwork.CONTAINER_KEY].source_of = set()
+        network.nodes[target.id][PropagationNetwork.CONTAINER_KEY].target_of = set()
+
 
 
 
 def main():
     config_path = "config.json"
     config = ConfigModel.parse_file(config_path)
-    network = network_from_config(config.ppi_config)
+    _name, _cls = 0, 1
+    loader_classes = {item[_name]: item[_cls] for item in inspect.getmembers(network_loaders, inspect.isclass)
+                      if issubclass(item[_cls], BaseNetworkLoader)}
+    network = network_from_config(config.ppi_config, loader_classes)
     output_dir = config.output_dir_path
     for propagation_config in config.propagations:
         propagate(network, propagation_config, output_dir)

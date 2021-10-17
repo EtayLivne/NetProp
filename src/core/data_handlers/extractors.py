@@ -15,12 +15,12 @@ class BaseFileDataExtractor(AbstractDataExtractor, metaclass=ABCMeta):
 
     @property
     def file_path(self):
-        return self.file_path
+        return self._file_path
 
     @file_path.setter
     def file_path(self, var):
-        if not isinstance(var, str):
-            raise ValueError("file_path may only be a string")
+        if not os_path.isfile(var):
+            raise ValueError(f"file {var} not found")
         self._file_path = var
 
     def _validate_path(self):
