@@ -91,7 +91,7 @@ def generic_propagate_on_random_networks(prior_set, prior_set_confidence,
 
     for randomized_network in randomized_networks:
         prop = Propagater(randomized_network, prior_set_confidence)
-        prop.propagate(prior_set)
+        prop.deprecated_propagate(prior_set)
         node_tuples = sorted([(node, data[prop._LIQUIDS]["liquid"]) for node, data in prop._network.nodes(data=True)],
                              key=lambda x: x[1], reverse=True)
         output_path = output_dir + f"{output_file_name_iterator}"
@@ -175,10 +175,11 @@ def propagate(network, propagation_config, output_dir):
         network.nodes[target.id][PropagationNetwork.CONTAINER_KEY].target_of = set()
 
 
+# def analytic_propagation_result()
 
 
 def main():
-    config_path = "config.json"
+    config_path = "example_config.json"
     config = ConfigModel.parse_file(config_path)
     _name, _cls = 0, 1
     loader_classes = {item[_name]: item[_cls] for item in inspect.getmembers(network_loaders, inspect.isclass)
@@ -187,6 +188,7 @@ def main():
     output_dir = config.output_dir_path
     for propagation_config in config.propagations:
         propagate(network, propagation_config, output_dir)
+
 
 
 if __name__ == "__main__":

@@ -3,8 +3,11 @@ from itertools import chain
 from pydantic.dataclasses import dataclass
 from pydantic import Field
 from typing import Set
-#from dataclasses import dataclass, field
 import networkx as nx
+import numpy.lib.scimath as np_scimath
+import numpy as np
+import scipy as sp
+
 
 
 @dataclass
@@ -109,7 +112,7 @@ class Propagater:
             return False
         return True
 
-    def propagate(self, prior_set, suppressed_set=None):
+    def deprecated_propagate(self, prior_set, suppressed_set=None):
         # validate input
         if not self.validate_propagation_node_sets(self._network, prior_set):
             raise ValueError("Cannot propagate because prior_set refers to nodes that do not exist")
@@ -137,7 +140,7 @@ class Propagater:
                 newest_subgraph_nodes = set.union(*[set(self._network.neighbors(node)) for node in newest_subgraph_nodes])
                 discovered_subgraph_nodes.update(newest_subgraph_nodes)
 
-            self._propagate_once(discovered_subgraph, prior_set, liquid_types)
+            self._deprecated_propagate_once(discovered_subgraph, prior_set, liquid_types)
 
             # Test halt conditions
             if self._max_steps != self.NO_MAX_STEPS:
@@ -152,6 +155,56 @@ class Propagater:
         # restore suppressed nodes
         self._suppress_nodes(reverse=True)
         self._normalize_edge_weights(reverse=True)
+
+    def propagate(self, prior_set, suppressed_set=None):
+        # validate input
+        if not self.validate_propagation_node_sets(self._network, prior_set):
+            raise ValueError("Cannot propagate because prior_set refers to nodes that do not exist")
+
+        if self._max_steps == self.NO_MAX_STEPS and self._min_gap == self.NO_MIN_GAP:
+            raise PropagationError("No halt condition specified")
+
+        # Prepare propagation based on parameters
+        self._suppress_nodes(suppressed_nodes=suppressed_set)
+        adjacency_matrix = nx.to_scipy_sparse_matrix(self.network)
+        adjacency_matrix = self._vector_normalize_edge_weights(adjacency_matrix)
+        liquids = {}
+        for prior in prior_set:
+            for liquid in self.network.nodes[prior][self.network.CONTAINER_KEY].source_of:
+                if liquid in liquids:
+                    liquids[liquid].add(prior)
+                else:
+                    liquids[liquid] = {prior}
+        self._reset_liquids(liquid_types=liquids.keys())
+
+        # Propagate
+        for liquid, priors in liquids.items():
+            # TODO support variable input confidence (by adding parameter to source_of thingy)
+            prior_vector = self.source_confidence * np.array([1 if n in priors else 0 for n in self.network.nodes])
+            state_vector = np.array([])
+            step_counter = self.max_steps
+            while True:
+                prev_state_vector = np.copy(state_vector) if state_vector.any() else np.copy(prior_vector)
+                state_vector = adjacency_matrix.dot(prev_state_vector) + prior_vector
+                sp.linalg.norm
+                if self.min_gap != self.NO_MIN_GAP and sp.linalg.norm(state_vector - prev_state_vector) < self.min_gap:
+                    break
+                if self.max_steps != self.NO_MAX_STEPS:
+                    step_counter -= 1
+                    if not step_counter:
+                        break
+            for index, node in enumerate(self.network.nodes):
+                self.network.nodes[node][self._LIQUIDS][liquid] = state_vector[index]
+
+        self._suppress_nodes(reverse=True)
+
+    #TODO support multiple forms of normalization (via parameter in propagation config)
+    # Only works for symmetric (i.e undirected) networks!
+    def _vector_normalize_edge_weights(self, adjacency_matrix, apply_confidence_coef=True):
+        weighted_deg_matrix = sp.sparse.diags(1 / np_scimath.sqrt(adjacency_matrix.sum(0).A1), format="csr")
+        coef = 1 - self.source_confidence if apply_confidence_coef else 1
+        return coef * weighted_deg_matrix * adjacency_matrix * weighted_deg_matrix
+
 
     def node_liquids(self, node_id):
         return self.network.nodes[node_id][self._LIQUIDS]
@@ -215,7 +268,7 @@ class Propagater:
                 self._unsuppressed_network = None
                 raise TypeError(f"failed to suppress {suppressed_nodes} because it is not an iterable of node ids")
 
-    def _propagate_once(self, subgraph, prior_set, liquid_types):
+    def _deprecated_propagate_once(self, subgraph, prior_set, liquid_types):
         self._snapshot_to_prev_liquid(subgraph.nodes, liquid_types=liquid_types)
 
         for node_data in subgraph.nodes(data=True):
@@ -238,3 +291,14 @@ class Propagater:
     def _gap_size(self, subgraph, liquid_type):
         return sqrt(sum(pow(data[self._LIQUIDS][liquid_type] - data[self._PREV_LIQUIDS][liquid_type], 2)
                                         for node, data in subgraph.nodes(data=True)))
+
+
+
+#TODO remove propagation test code below. It's dirty!
+# network = PropagationNetwork()
+# network.add_edge(1, 2, weight=0.5)
+# network.nodes[1][PropagationNetwork.CONTAINER_KEY] = PropagationContainer(source_of={"liquid"})
+# network.nodes[2][PropagationNetwork.CONTAINER_KEY] = PropagationContainer(target_of={"liquid"})
+# p = Propagater(network, 0.5, max_steps=4)
+# p.propagate({1})
+# x = 5
