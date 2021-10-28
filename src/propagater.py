@@ -7,6 +7,9 @@ import networkx as nx
 import numpy.lib.scimath as np_scimath
 import numpy as np
 import scipy as sp
+import scipy.linalg
+from scipy.sparse.linalg import inv
+
 
 
 
@@ -43,10 +46,12 @@ class Propagater:
     _PREV_LIQUIDS = "prev_liquids"
     _LIQUIDS = "liquids"
     _EDGE_WEIGHT = PropagationNetwork.EDGE_WEIGHT
-    _UNNORMALIZED_EDGE_WEIGHT = "unnormalized_weight"
     _DEFAULT_HALT_CONDITION_GAP = 10e-5
     NO_MAX_STEPS = -1
     NO_MIN_GAP = -1
+    ITERATIVE = "iterative"
+    ANALYTICAL = "analytical"
+
 
     @staticmethod
     def _edge_degree_coef(node1_deg, node2_deg):
@@ -61,6 +66,8 @@ class Propagater:
         self._reset_liquids()
         self._edges_are_normalized = False
         self._unsuppressed_network = None
+        self._propagation_methods = {self.ITERATIVE: self._iterative_propagation,
+                                     self.ANALYTICAL: self._analytic_propagation}
 
     @property
     def network(self):
@@ -112,7 +119,7 @@ class Propagater:
             return False
         return True
 
-    def deprecated_propagate(self, prior_set, suppressed_set=None):
+    def propagate(self, prior_set, suppressed_set=None, propagation_method="iterative"):
         # validate input
         if not self.validate_propagation_node_sets(self._network, prior_set):
             raise ValueError("Cannot propagate because prior_set refers to nodes that do not exist")
@@ -120,54 +127,14 @@ class Propagater:
         if self._max_steps == self.NO_MAX_STEPS and self._min_gap == self.NO_MIN_GAP:
             raise PropagationError("No halt condition specified")
 
-        # Incorporate propagation inputs into propagation graph
-        self._suppress_nodes(suppressed_nodes=suppressed_set)
-        self._normalize_edge_weights(apply_confidence_coef=True)
-        liquid_types = set.union(*[self._network.nodes[node][self._network.CONTAINER_KEY].source_of
-                                   for node in prior_set if node in prior_set])
-        self._reset_liquids(liquid_types=liquid_types)
-
-        # Prepare initial propagation state
-        discovered_subgraph_nodes = set(prior_set)
-        newest_subgraph_nodes = discovered_subgraph_nodes
-        check_for_gaps_counter = 1
-        step_counter = 1
-
-        # Propagate
-        while True:
-            discovered_subgraph = nx.subgraph(self._network, discovered_subgraph_nodes)
-            if len(self._network) > len(discovered_subgraph):
-                newest_subgraph_nodes = set.union(*[set(self._network.neighbors(node)) for node in newest_subgraph_nodes])
-                discovered_subgraph_nodes.update(newest_subgraph_nodes)
-
-            self._deprecated_propagate_once(discovered_subgraph, prior_set, liquid_types)
-
-            # Test halt conditions
-            if self._max_steps != self.NO_MAX_STEPS:
-                if step_counter >= self.max_steps:
-                    break
-                step_counter += 1
-            elif self._min_gap != self.NO_MIN_GAP and check_for_gaps_counter % 3 == 0:
-                if all(self._gap_size(discovered_subgraph, l_type) < self._min_gap for l_type in liquid_types):
-                    break
-                check_for_gaps_counter += 1
-
-        # restore suppressed nodes
-        self._suppress_nodes(reverse=True)
-        self._normalize_edge_weights(reverse=True)
-
-    def propagate(self, prior_set, suppressed_set=None):
-        # validate input
-        if not self.validate_propagation_node_sets(self._network, prior_set):
-            raise ValueError("Cannot propagate because prior_set refers to nodes that do not exist")
-
-        if self._max_steps == self.NO_MAX_STEPS and self._min_gap == self.NO_MIN_GAP:
-            raise PropagationError("No halt condition specified")
+        if propagation_method not in self._propagation_methods:
+            raise ValueError(f"propagation method {propagation_method} unrecognized. "
+                             f"Choose one of the following: {self._PROPAGATION_METHODS}")
 
         # Prepare propagation based on parameters
         self._suppress_nodes(suppressed_nodes=suppressed_set)
         adjacency_matrix = nx.to_scipy_sparse_matrix(self.network)
-        adjacency_matrix = self._vector_normalize_edge_weights(adjacency_matrix)
+        adjacency_matrix = self._normalize_edge_weights(adjacency_matrix)
         liquids = {}
         for prior in prior_set:
             for liquid in self.network.nodes[prior][self.network.CONTAINER_KEY].source_of:
@@ -179,32 +146,37 @@ class Propagater:
 
         # Propagate
         for liquid, priors in liquids.items():
-            # TODO support variable input confidence (by adding parameter to source_of thingy)
             prior_vector = self.source_confidence * np.array([1 if n in priors else 0 for n in self.network.nodes])
-            state_vector = np.array([])
-            step_counter = self.max_steps
-            while True:
-                prev_state_vector = np.copy(state_vector) if state_vector.any() else np.copy(prior_vector)
-                state_vector = adjacency_matrix.dot(prev_state_vector) + prior_vector
-                sp.linalg.norm
-                if self.min_gap != self.NO_MIN_GAP and sp.linalg.norm(state_vector - prev_state_vector) < self.min_gap:
-                    break
-                if self.max_steps != self.NO_MAX_STEPS:
-                    step_counter -= 1
-                    if not step_counter:
-                        break
+            state_vector = self._propagation_methods[propagation_method](prior_vector, adjacency_matrix)
             for index, node in enumerate(self.network.nodes):
                 self.network.nodes[node][self._LIQUIDS][liquid] = state_vector[index]
 
         self._suppress_nodes(reverse=True)
 
+    def _iterative_propagation(self, prior_vector, adjacency_matrix):
+        state_vector = np.array([])
+        step_counter = self.max_steps
+        while True:
+            prev_state_vector = np.copy(state_vector) if state_vector.any() else np.copy(prior_vector)
+            state_vector = adjacency_matrix.dot(prev_state_vector) + prior_vector
+            if self.min_gap != self.NO_MIN_GAP and sp.linalg.norm(state_vector - prev_state_vector) < self.min_gap:
+                break
+            if self.max_steps != self.NO_MAX_STEPS:
+                step_counter -= 1
+                if not step_counter:
+                    break
+        return state_vector
+
+    def _analytic_propagation(self, prior_vector, adjacency_matrix):
+        I = sp.sparse.diags([1] * len(self.network.nodes), format="csr")
+        return sp.sparse.linalg.inv(I - adjacency_matrix).dot(prior_vector)
+
     #TODO support multiple forms of normalization (via parameter in propagation config)
     # Only works for symmetric (i.e undirected) networks!
-    def _vector_normalize_edge_weights(self, adjacency_matrix, apply_confidence_coef=True):
+    def _normalize_edge_weights(self, adjacency_matrix, apply_confidence_coef=True):
         weighted_deg_matrix = sp.sparse.diags(1 / np_scimath.sqrt(adjacency_matrix.sum(0).A1), format="csr")
         coef = 1 - self.source_confidence if apply_confidence_coef else 1
         return coef * weighted_deg_matrix * adjacency_matrix * weighted_deg_matrix
-
 
     def node_liquids(self, node_id):
         return self.network.nodes[node_id][self._LIQUIDS]
@@ -223,28 +195,6 @@ class Propagater:
 
             data[self._PREV_LIQUIDS].update(reset_dict)
             data[self._LIQUIDS].update(reset_dict)
-
-    # assumes graph is directed, otherwise each edge will be normalized twice, which is bad!
-    def _normalize_edge_weights(self, reverse=False, apply_confidence_coef=True):
-        if reverse != self._edges_are_normalized:
-            raise PropagationError(
-                "May not normalize edges that are already normalized or reverse an unnormalized edge")
-
-        if reverse:
-            for node1, node2, data in self._network.edges(data=True):
-                data[self._EDGE_WEIGHT] = data[self._UNNORMALIZED_EDGE_WEIGHT]
-            self._edges_are_normalized = False
-
-        else:
-            # degree dict to access node degree quickly instead of calculating it again for each edge
-            node_degree = {n: self._network.degree(n) for n in self._network.nodes()}
-            confidence_coef = float(1 - self._source_confidence) if apply_confidence_coef else 1.0
-            for node_1, node_2, data in self._network.edges(data=True):
-                data[self._UNNORMALIZED_EDGE_WEIGHT] = data[self._EDGE_WEIGHT]
-                data[self._EDGE_WEIGHT] *=\
-                    confidence_coef * self._edge_degree_coef(node_degree[node_1], node_degree[node_2])
-
-            self._edges_are_normalized = True
 
     def _suppress_nodes(self, suppressed_nodes=None, reverse=False):
 
@@ -268,29 +218,6 @@ class Propagater:
                 self._unsuppressed_network = None
                 raise TypeError(f"failed to suppress {suppressed_nodes} because it is not an iterable of node ids")
 
-    def _deprecated_propagate_once(self, subgraph, prior_set, liquid_types):
-        self._snapshot_to_prev_liquid(subgraph.nodes, liquid_types=liquid_types)
-
-        for node_data in subgraph.nodes(data=True):
-            node, data = node_data
-            for l_t in liquid_types:
-                data[self._LIQUIDS][l_t] = \
-                    sum(subgraph.nodes[neighbor][self._PREV_LIQUIDS][l_t] * subgraph[node][neighbor][self._EDGE_WEIGHT]
-                        for neighbor in subgraph.neighbors(node))
-                if node in prior_set and l_t in data[self._network.CONTAINER_KEY].source_of:
-                    data[self._LIQUIDS][l_t] += self._source_confidence
-
-    def _snapshot_to_prev_liquid(self, nodes, liquid_types=None):
-        snapshot_nodes = nodes or self._network.nodes
-        for node in snapshot_nodes:
-            data = self._network.nodes[node]
-            snapshot_liquids = liquid_types or data[self._LIQUIDS]
-            data[self._PREV_LIQUIDS].update({liquid_type: data[self._LIQUIDS].get(liquid_type, 0)
-                                             for liquid_type in snapshot_liquids})
-
-    def _gap_size(self, subgraph, liquid_type):
-        return sqrt(sum(pow(data[self._LIQUIDS][liquid_type] - data[self._PREV_LIQUIDS][liquid_type], 2)
-                                        for node, data in subgraph.nodes(data=True)))
 
 
 

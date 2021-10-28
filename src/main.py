@@ -11,58 +11,55 @@ from network_loader import BaseNetworkLoader
 from propagater import Propagater, PropagationNetwork
 from common.data_handlers.managers import HSapiensManager
 from common.data_handlers.extractors import GeneInfoExtractor
-from config_models import ConfigModel, PPIModel, PropagationSourceModel, PropagationTargetModel
+from config_models import ConfigModel, PPIModel, PropagationParametersModel
 from results_models import PropagationNetworkModel, PropagationResultModel, HaltConditionOptionModel,\
                            PropagationProteinModel
 from constants import NodeAttrs
+import sys
 
 
 #TODO: find reasonable way to enforce set behavior on pyantics models. Currently cannot support sets of models so everything is a list
 # reason for this is that .dict() will convert any member of the set to a dict, but a dict isn't hashable, which then crushes the program
 
 
-
 def generate_rank_equivalent_random_network(network):
-    edges_to_switch = 10 * len(list(network.edges))
+    switches = 100 * len(list(network.edges))
     switch_types = ["place", "target", "source"]
     edge_source_sample = []
     for node in network.nodes:
         edge_source_sample.extend([node] * network.degree(node))
-    while edges_to_switch:
+
+    while switches:
+        switch_type = choice(switch_types)
         source_1 = choice(edge_source_sample)
         target_1 = choice(list(network.neighbors(source_1)))
-        random_edge_1 = (source_1, target_1)
-        random_edge_1_attrs = dict(network.edges[random_edge_1])
+        edge_1 = (source_1, target_1)
+        edge_1_attrs = dict(network.edges[edge_1])
+
+        # given the first random edge, generate a second one where the change would be an actual change
         while True:
             source_2 = choice(edge_source_sample)
             target_2 = choice(list(network.neighbors(source_2)))
-            if source_2 in random_edge_1 or target_2 in random_edge_1:
+            if (switch_type == "place" and (source_2 not in edge_1)) or\
+               (switch_type == "source" and (source_2 not in edge_1 and source_1 != target_2)) or\
+               (switch_type == "target" and (target_2 not in edge_1 and source_2 != target_1)):
                 break
-        random_edge_2 = (source_2, target_2)
-        random_edge_2_attrs = dict(network.edges[random_edge_2])
+        edge_2 = (source_2, target_2)
+        edge_2_attrs = dict(network.edges[edge_2])
 
-        switch_type = choice(switch_types)
+        network.remove_edge(*edge_1)
+        network.remove_edge(*edge_2)
         if switch_type == "place":
-            network.remove_edge(*random_edge_1)
-            network.remove_edge(*random_edge_2)
-            network.add_edge(*random_edge_1, **random_edge_2_attrs)
-            network.add_edge(*random_edge_2, **random_edge_1_attrs)
+            network.add_edge(*edge_1, **edge_2_attrs)
+            network.add_edge(*edge_2, **edge_1_attrs)
         if switch_type == "target":
-            if network.has_edge(random_edge_1[0], random_edge_2[1]) or network.has_edge(random_edge_2[0], random_edge_1[1]):
-                continue
-            network.remove_edge(*random_edge_1)
-            network.remove_edge(*random_edge_2)
-            network.add_edge(random_edge_1[0], random_edge_2[1], **random_edge_1_attrs)
-            network.add_edge(random_edge_2[0], random_edge_1[1], **random_edge_2_attrs)
+            network.add_edge(edge_1[0], edge_2[1], **edge_1_attrs)
+            network.add_edge(edge_2[0], edge_1[1], **edge_2_attrs)
         if switch_type == "source":
-            if network.has_edge(random_edge_2[0], random_edge_1[1]) or network.has_edge(random_edge_1[0], random_edge_2[1]):
-                continue
-            network.remove_edge(*random_edge_1)
-            network.remove_edge(*random_edge_2)
-            network.add_edge(random_edge_2[0], random_edge_1[1], **random_edge_1_attrs)
-            network.add_edge(random_edge_1[0], random_edge_2[1], **random_edge_2_attrs)
+            network.add_edge(edge_2[0], edge_1[1], **edge_1_attrs)
+            network.add_edge(edge_1[0], edge_2[1], **edge_2_attrs)
 
-        edges_to_switch -= 1
+        switches -= 1
 
 
 def randomize_h_sapiens():
@@ -153,16 +150,18 @@ def propagate(network, propagation_config, output_dir):
     max_steps = propagation_config.halt_conditions.max_steps or Propagater.NO_MAX_STEPS
     min_gap = propagation_config.halt_conditions.min_gap or Propagater.NO_MIN_GAP
 
-    prior_set_confidence = propagation_config.prior_set_confidence
+    prior_set_confidence, method = propagation_config.prior_set_confidence, propagation_config.method
     prior_set, target_set, suppressed_set\
         = propagation_config.prior_set, propagation_config.target_set, propagation_config.suppressed_set
 
-    for prior, target in zip(prior_set, propagation_config.target_set):
+    for prior in prior_set:
         network.nodes[prior.id][PropagationNetwork.CONTAINER_KEY].source_of = prior.source_of
+
+    for target in propagation_config.target_set:
         network.nodes[target.id][PropagationNetwork.CONTAINER_KEY].target_of = target.target_of
 
     propagater = Propagater(network, prior_set_confidence, max_steps=max_steps, min_gap=min_gap)
-    propagater.propagate([p.id for p in prior_set], suppressed_set=suppressed_set)
+    propagater.propagate([p.id for p in prior_set], suppressed_set=suppressed_set, propagation_method=method)
 
     propagation_id = propagation_config.id or network[PPIModel.network_id_key] + "_" + str(datetime.now())
     record_propagation_result(propagater,
@@ -177,10 +176,29 @@ def propagate(network, propagation_config, output_dir):
 
 # def analytic_propagation_result()
 
+def load_config(config_path):
+    config = ConfigModel.parse_file(config_path)
+    if config.global_propagation_params:
+        global_params = config.global_propagation_params.dict(exclude_unset=True)
+        propagation_dicts = [merge_dicts(global_params, p.dict(exclude_unset=True)) for p in config.propagations]
+        config.propagations = [PropagationParametersModel(**d) for d in propagation_dicts]
+
+    if val_error := next(iter([p for p in config.propagations if not p.validate_completeness()]), None):
+        error_propagation_id = val_error.id or str(val_error)
+        raise ValueError(f"propagation identified as {error_propagation_id} doesnt have every required field")
+
+    return config
+
+def merge_dicts(*dicts):
+    new_dict = dict()
+    for d in dicts:
+        new_dict.update(d)
+    return new_dict
 
 def main():
-    config_path = "example_config.json"
-    config = ConfigModel.parse_file(config_path)
+    config_path = sys.argv[1]
+    config = load_config(config_path)
+
     _name, _cls = 0, 1
     loader_classes = {item[_name]: item[_cls] for item in inspect.getmembers(network_loaders, inspect.isclass)
                       if issubclass(item[_cls], BaseNetworkLoader)}
@@ -190,6 +208,36 @@ def main():
         propagate(network, propagation_config, output_dir)
 
 
-
 if __name__ == "__main__":
     main()
+
+    # network = network_loaders.HumanCovidHybridNetworkLoader("C:\\studies\\code\\NetProp\\data\\H_sapiens.net").load_network()
+    # prior_set = [
+    #     {
+    #         "id": node,
+    #         "source_of": [node]
+    #     } for node, data in network.nodes(data=True) if data["species_id"] == "sars-cov-2"
+    # ]
+    #
+    # with open("temp\\conf.json", 'w') as handler:
+    #     json.dump({
+    #         "ppi_config": {
+    #             "id": "mr_dummy",
+    #             "source_file": "C:\\studies\\code\\NetProp\\data\\H_sapiens.net",
+    #             "loader_class": "HumanCovidHybridNetworkLoader",
+    #             "protein_id_class": "entrezgene"
+    #         },
+    #         "global_propagation_params": {
+    #             "prior_set_confidence": 0.8,
+    #             "halt_conditions": {
+    #                 "min_gap": 1e-4
+    #             }
+    #         },
+    #         "propagations": [
+    #             {
+    #                 "id": "all_covid_sources",
+    #                 "prior_set": prior_set
+    #             }
+    #         ],
+    #         "output_dir": "temp\\propagation_results"
+    #     }, handler, indent=4)

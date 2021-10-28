@@ -1,5 +1,6 @@
 from pydantic import BaseModel, validator, Field
 from typing import Optional, Set, List, ClassVar
+from propagater import Propagater
 from enum import Enum
 
 class ProteinIDs(str, Enum):
@@ -60,29 +61,32 @@ class HaltConditionOptionModel(BaseModel):
     #         raise ValueError("in halt condition of type {} field {} is not applicable".format(values["type"], v))
 
 
+
+
 class PropagationParametersModel(BaseModel):
-    prior_set: List[PropagationSourceModel]
-    target_set: List[PropagationTargetModel]
+    prior_set: Optional[List[PropagationSourceModel]]
+    target_set: List[PropagationTargetModel] = Field(default_factory=set)
     suppressed_set: Set[str] = Field(default_factory=set)
-    prior_set_confidence: float
-    halt_conditions: HaltConditionOptionModel
+    prior_set_confidence: Optional[float]
+    halt_conditions: Optional[HaltConditionOptionModel]
+    method: str = Propagater.ITERATIVE
     id: Optional[str] = None
+
+    # this model has all optional fields intentionally so that they may be filled after creation.
+    # this method validates that all fields are ready
+    def validate_completeness(self):
+        return self.prior_set and self.prior_set_confidence and self.halt_conditions
 
     @validator('prior_set_confidence')
     def confidence_is_valid_probability(cls, v):
-        if v < 0 or v > 1:
+        if v and (v < 0 or v > 1):
             raise ValueError("the confidence in a prior set must be a probability between 0 and 1")
         return v
-
-    # @validator('prior_set', 'target_set', "suppressed_set", allow_reuse=True)
-    # def no_repeats(cls, v):
-    #     if len(set(v)) != len(v):
-    #         raise ValueError("repeats detected in input set")
-    #     return v
 
 
 class ConfigModel(BaseModel):
     ppi_config: PPIModel
+    global_propagation_params: Optional[PropagationParametersModel]
     propagations: List[PropagationParametersModel]
     output_dir_path: str
 

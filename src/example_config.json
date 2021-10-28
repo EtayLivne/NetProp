@@ -1,7 +1,7 @@
 {
   "ppi_config": {
     "id": "mr_dummy",
-    "source_file": "C:\\studies\\thesis\\code\\NetProp\\data\\H_sapiens.net",
+    "source_file": "C:\\studies\\code\\NetProp\\data\\H_sapiens.net",
     "loader_class": "HSapeinsNetworkLoader",
     "protein_id_class": "entrezgene"
   },
