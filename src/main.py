@@ -1,10 +1,9 @@
-import json
 import inspect
 import sys
 from os.path import join as os_path_join
 from random import choice
+from multiprocessing import Queue, Pool
 from datetime import datetime
-from importlib import import_module
 from data_extractors import *
 import common.network_loaders as network_loaders
 from network_loader import BaseNetworkLoader
@@ -15,15 +14,14 @@ from config_models import ConfigModel, PPIModel, PropagationParametersModel
 from results_models import PropagationNetworkModel, PropagationResultModel, HaltConditionOptionModel,\
                            PropagationProteinModel
 from constants import NodeAttrs
-import sys
-
+from os import path as os_path
 
 #TODO: find reasonable way to enforce set behavior on pyantics models. Currently cannot support sets of models so everything is a list
 # reason for this is that .dict() will convert any member of the set to a dict, but a dict isn't hashable, which then crushes the program
 
 
-def generate_rank_equivalent_random_network(network):
-    switches = 100 * len(list(network.edges))
+def generate_rank_equivalent_random_network(network, edge_switch_factor):
+    switches = edge_switch_factor * len(list(network.edges))
     switch_types = ["place", "target", "source"]
     edge_source_sample = []
     for node in network.nodes:
@@ -36,13 +34,14 @@ def generate_rank_equivalent_random_network(network):
         edge_1 = (source_1, target_1)
         edge_1_attrs = dict(network.edges[edge_1])
 
+
         # given the first random edge, generate a second one where the change would be an actual change
         while True:
             source_2 = choice(edge_source_sample)
             target_2 = choice(list(network.neighbors(source_2)))
-            if (switch_type == "place" and (source_2 not in edge_1)) or\
-               (switch_type == "source" and (source_2 not in edge_1 and source_1 != target_2)) or\
-               (switch_type == "target" and (target_2 not in edge_1 and source_2 != target_1)):
+            edge_2 = (source_2, target_2)
+            if (switch_type == "place" and (len(set(edge_1 + edge_2)) > 2)) or\
+               (switch_type != "place" and (len(set(edge_1 + edge_2)) == 4)):
                 break
         edge_2 = (source_2, target_2)
         edge_2_attrs = dict(network.edges[edge_2])
@@ -60,42 +59,6 @@ def generate_rank_equivalent_random_network(network):
             network.add_edge(edge_1[0], edge_2[1], **edge_2_attrs)
 
         switches -= 1
-
-
-def randomize_h_sapiens():
-    h_sapiens = HSapiensManager(r"C:\studies\code\NetProp\data\H_sapiens.net")
-    human_ppi = h_sapiens.get_data()
-    generate_rank_equivalent_random_network(human_ppi)
-    return human_ppi
-
-
-def prior_set_from_json(path_to_json, prior_set_identifier):
-    with open(path_to_json, 'r') as handler:
-        data = json.load(handler)
-
-    try:
-        gene_names = data[prior_set_identifier]
-    except KeyError:
-        raise KeyError(f"no prior set with identifier {prior_set_identifier} in json file {path_to_json}")
-
-    gene_ids_extractor = GeneInfoExtractor()
-    query_results = [result for result in gene_ids_extractor.extract(gene_names) if "entrezgene" in result]
-    return [int(result['entrezgene']) for result in query_results]
-
-
-def generic_propagate_on_random_networks(prior_set, prior_set_confidence,
-                                         randomized_networks, output_dir, output_file_name_iterator):
-
-    for randomized_network in randomized_networks:
-        prop = Propagater(randomized_network, prior_set_confidence)
-        prop.deprecated_propagate(prior_set)
-        node_tuples = sorted([(node, data[prop._LIQUIDS]["liquid"]) for node, data in prop._network.nodes(data=True)],
-                             key=lambda x: x[1], reverse=True)
-        output_path = output_dir + f"{output_file_name_iterator}"
-        with open(output_path, 'w') as handler:
-            json.dump([{"gene_id": node_tuple[0], "liquid": node_tuple[1], "in_prior_set": node_tuple[0] in prior_set} for node_tuple in node_tuples], handler, indent=4)
-        print("yo")
-
 
 def network_from_config(network_config, loader_classes):
     loader_class = loader_classes.get(network_config.loader_class, None)
@@ -195,22 +158,74 @@ def merge_dicts(*dicts):
         new_dict.update(d)
     return new_dict
 
-def main():
-    config_path = sys.argv[1]
-    config = load_config(config_path)
 
+def worker_main(ppi_config, output_dir, propagation_queue):
     _name, _cls = 0, 1
     loader_classes = {item[_name]: item[_cls] for item in inspect.getmembers(network_loaders, inspect.isclass)
                       if issubclass(item[_cls], BaseNetworkLoader)}
-    network = network_from_config(config.ppi_config, loader_classes)
-    output_dir = config.output_dir_path
-    for propagation_config in config.propagations:
+    network = network_from_config(ppi_config, loader_classes)
+
+    while True:
+        propagation_config = propagation_queue.get(block=True)
+        if propagation_config == "HALT":
+            break
         propagate(network, propagation_config, output_dir)
 
 
-if __name__ == "__main__":
-    main()
+def randomizer_main(original_network_file, network_loader_class, queue):
+    network_loader = network_loader_class(original_network_file)
 
+
+    while True:
+        randomization_request = queue.get(block=True)
+
+        if randomization_request == "HALT":
+            break
+        output_path = randomization_request["output_path"]
+        switch_factor = randomization_request["edge_switch_factor"]
+        print(f"now handling request for {output_path}")
+        network = network_loader.load_network()
+        generate_rank_equivalent_random_network(network, switch_factor)
+        network_loader_class.record_network(network, output_path)
+
+
+def main():
+    config_path = sys.argv[1]
+    config = load_config(config_path)
+    propagations_queue = Queue()
+    worker_pool = Pool(10, worker_main, (config.ppi_config, config.output_dir, propagations_queue))
+    for propagations_config in config.propagations:
+        propagations_queue.put(propagations_config)
+    for worker in range(10):
+        propagations_queue.put("HALT")
+
+    propagations_queue.close()
+    propagations_queue.join_thread()
+    worker_pool.close()
+    worker_pool.join()
+
+
+def randomize_network(number_of_randomizations, edge_switch_factor, original_network_file,
+                      network_loader_class, output_dir):
+    queue = Queue()
+    randomizers = Pool(10, randomizer_main, (original_network_file, network_loader_class, queue))
+    original_network_name = os_path.basename(original_network_file).split(".")[0]
+    for i in range(number_of_randomizations):
+        queue.put({"edge_switch_factor": edge_switch_factor,
+                   "output_path": os_path.join(output_dir, original_network_name + f"_{i}")})
+
+    for i in range(10):
+        queue.put("HALT")
+
+    queue.close()
+    queue.join_thread()
+    randomizers.close()
+    randomizers.join()
+
+if __name__ == "__main__":
+    # main()
+    randomize_network(100, 50, r"C:\studies\code\NetProp\data\H_sapiens.net", network_loaders.HSapeinsNetworkLoader,
+                      r"C:\studies\code\NetProp\data\randomized_h_sapiens_with_covid")
     # network = network_loaders.HumanCovidHybridNetworkLoader("C:\\studies\\code\\NetProp\\data\\H_sapiens.net").load_network()
     # prior_set = [
     #     {

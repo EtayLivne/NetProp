@@ -40,6 +40,15 @@ class HSapeinsNetworkLoader(PPINetworkLoader):
             network.add_edge(source_node, target_node, **self._new_edge_attrs(edge_weight))
         return network
 
+    @staticmethod
+    def record_network(network, file_path):
+        edges = sorted(network.edges(data=True))
+        with open(file_path, 'w') as handler:
+            for edge_data in edges:
+                source = min(edge_data[0], edge_data[1])
+                target = max(edge_data[0], edge_data[1])
+                weight = edge_data[2][PropagationNetwork.EDGE_WEIGHT]
+                handler.write(f"{source}\t{target}\t{weight}\n")
 
 class CovidToHumanNetworkLoader(PPINetworkLoader):
     _DEFAULT_PATH_TO_ID_TRANSLATION_FILE = r"C:\studies\code\NetProp\data\gene_symbol_to_entrezgeneid_new.json"
