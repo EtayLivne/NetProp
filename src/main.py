@@ -169,6 +169,7 @@ def worker_main(ppi_config, output_dir, propagation_queue):
         propagation_config = propagation_queue.get(block=True)
         if propagation_config == "HALT":
             break
+        print(f"Now propagating {propagation_config.id}")
         propagate(network, propagation_config, output_dir)
 
 
@@ -193,7 +194,7 @@ def main():
     config_path = sys.argv[1]
     config = load_config(config_path)
     propagations_queue = Queue()
-    worker_pool = Pool(10, worker_main, (config.ppi_config, config.output_dir, propagations_queue))
+    worker_pool = Pool(10, worker_main, (config.ppi_config, config.output_dir_path, propagations_queue))
     for propagations_config in config.propagations:
         propagations_queue.put(propagations_config)
     for worker in range(10):
@@ -223,9 +224,29 @@ def randomize_network(number_of_randomizations, edge_switch_factor, original_net
     randomizers.join()
 
 if __name__ == "__main__":
-    # main()
-    randomize_network(100, 50, r"C:\studies\code\NetProp\data\H_sapiens.net", network_loaders.HSapeinsNetworkLoader,
-                      r"C:\studies\code\NetProp\data\randomized_h_sapiens_with_covid")
+    main()
+    # randomize_network(100, 50, r"C:\studies\code\NetProp\data\H_sapiens.net", network_loaders.HSapeinsNetworkLoader,
+    #                   r"C:\studies\code\NetProp\data\randomized_h_sapiens_with_covid")
+
+
+
+    # with open(r"C:\studies\code\NetProp\src\temp\configurations\original_h_sapiens_covid_conf.json", "r") as handler:
+    #     conf = json.load(handler)
+    # conf["output_dir_path"] = r"C:\studies\code\NetProp\src\temp\propagations\gene_knockouts"
+    # propagations = []
+    # full_network_propagation = conf["propagations"][0]
+    # network = network_loaders.HumanCovidHybridNetworkLoader(conf["ppi_config"]["source_file"]).load_network()
+    # for n in [n for n in network.nodes if network.nodes[n]["species_id"] == "human"][1000:4000]:
+    #     knockout_propagation = full_network_propagation.copy()
+    #     knockout_propagation.update({"suppressed_set": [n], "id": f"{n}_knockout"})
+    #     propagations.append(knockout_propagation)
+    #
+    # conf["propagations"] = propagations
+    # print(f"{len(propagations)} single knockouts")
+    # with open("temp/configurations/single_knockouts_conf.json", "w") as handler:
+    #     json.dump(conf, handler, indent=4)
+
+
     # network = network_loaders.HumanCovidHybridNetworkLoader("C:\\studies\\code\\NetProp\\data\\H_sapiens.net").load_network()
     # prior_set = [
     #     {

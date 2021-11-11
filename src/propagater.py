@@ -134,7 +134,8 @@ class Propagater:
         # Prepare propagation based on parameters
         self._suppress_nodes(suppressed_nodes=suppressed_set)
         adjacency_matrix = nx.to_scipy_sparse_matrix(self.network)
-        adjacency_matrix = self._normalize_edge_weights(adjacency_matrix)
+        # TODO remove passing of suppressed nodes - this is purely for debugging!
+        adjacency_matrix = self._normalize_edge_weights(adjacency_matrix, suppressed_nodes=suppressed_set)
         liquids = {}
         for prior in prior_set:
             for liquid in self.network.nodes[prior][self.network.CONTAINER_KEY].source_of:
@@ -173,7 +174,10 @@ class Propagater:
 
     #TODO support multiple forms of normalization (via parameter in propagation config)
     # Only works for symmetric (i.e undirected) networks!
-    def _normalize_edge_weights(self, adjacency_matrix, apply_confidence_coef=True):
+    def _normalize_edge_weights(self, adjacency_matrix, apply_confidence_coef=True, suppressed_nodes=None):
+        # TODO: remove this if and the print within it, they are purely for debugging.
+        # if any(num == 0 for num in adjacency_matrix.sum(0).A1):
+        #     print(f"zero division for {suppressed_nodes}")
         weighted_deg_matrix = sp.sparse.diags(1 / np_scimath.sqrt(adjacency_matrix.sum(0).A1), format="csr")
         coef = 1 - self.source_confidence if apply_confidence_coef else 1
         return coef * weighted_deg_matrix * adjacency_matrix * weighted_deg_matrix
@@ -208,12 +212,19 @@ class Propagater:
             self._unsuppressed_network = None
 
         else:
-            suppressed_nodes = suppressed_nodes or set()
-            suppressed_nodes_list = [node for node in self._network.nodes if node not in suppressed_nodes]
+            # nodes that need to be removed are those explicitly specified and those orphaned by their removal.
+            suppressed_nodes = [node for node in suppressed_nodes] if suppressed_nodes else list()
+            orpahned_neighbors = []
+            for node in suppressed_nodes:
+                orpahned_neighbors.extend([neighbor for neighbor in self._network.neighbors(node) if
+                                           self._network.degree(neighbor) == 1])
+            suppressed_nodes.extend(orpahned_neighbors)
+            suppressed_network_nodes = [node for node in self._network.nodes if node not in suppressed_nodes]
+            # print(f"there are {len(suppressed_network_nodes)} nodes in the subgraph when {suppressed_nodes} are suppressed")
 
             self._unsuppressed_network = self._network
             try:
-                self._network = nx.subgraph(self._network, suppressed_nodes_list)
+                self._network = nx.subgraph(self._network, suppressed_network_nodes)
             except TypeError:
                 self._unsuppressed_network = None
                 raise TypeError(f"failed to suppress {suppressed_nodes} because it is not an iterable of node ids")

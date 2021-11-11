@@ -15,6 +15,7 @@ class PropagationNodeModel(BaseModel):
     id: str
     source_of: Set[str]
     target_of: Set[str]
+    rank: Optional[int]
     liquids: Dict[str, float]
 
     class Config:
