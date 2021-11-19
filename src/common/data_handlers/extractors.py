@@ -67,3 +67,4 @@ class GeneInfoExtractor(AbstractWebAPIDataExtractor):
             raise Exception("Failed to query MyGeneInfo")
         return [result for result in ncbi_query]
 
+

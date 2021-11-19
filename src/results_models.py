@@ -39,7 +39,7 @@ class PropagationProteinModel(PropagationNodeModel):
 class PropagationResultModel(BaseModel):
     id: str
     network: PropagationNetworkModel
-    nodes: List[PropagationNodeModel]
+    nodes: Dict[str, PropagationNodeModel]
     prior_set_confidence: float
     halt_conditions: HaltConditionOptionModel
 

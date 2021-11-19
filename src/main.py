@@ -88,14 +88,13 @@ def record_propagation_result(propagater, suppressed_nodes, file_path, propagati
     min_gap = propagater.min_gap if propagater.min_gap != propagater.NO_MIN_GAP else None
     halt_conditions = HaltConditionOptionModel(max_steps=max_steps, min_gap=min_gap)
 
-    nodes = [PropagationProteinModel(
-        id=node,
-        source_of=data[PropagationNetwork.CONTAINER_KEY].source_of,
-        target_of=data[PropagationNetwork.CONTAINER_KEY].target_of,
-        liquids=propagater.node_liquids(node),
-        id_type=propagater.network.graph[PPIModel.protein_id_class_key],
-        species=data[NodeAttrs.SPECIES_ID.value]
-    ) for node, data in propagater.network.nodes(data=True) if node not in suppressed_nodes]
+    nodes = {node: PropagationProteinModel(id=node,
+                                           source_of=data[PropagationNetwork.CONTAINER_KEY].source_of,
+                                           target_of=data[PropagationNetwork.CONTAINER_KEY].target_of,
+                                           liquids=propagater.node_liquids(node),
+                                           id_type=propagater.network.graph[PPIModel.protein_id_class_key],
+                                           species=data[NodeAttrs.SPECIES_ID.value])
+             for node, data in propagater.network.nodes(data=True) if node not in suppressed_nodes}
 
     propagation_result = PropagationResultModel(
         id=propagation_id,
