@@ -1,11 +1,14 @@
-from .pathways import Pathway, PathwayManager, tag_unknown_genes
+from result_analysis.pathway_analysis.pathways import Pathway, PathwayManager, tag_unknown_genes
 
+import json
 import os
 from math import sqrt
-from typing import List, Set
+from typing import List, Set, Dict
 from sortedcontainers import SortedList
-from results_models import PropagationResultModel
+from results_models import PropagationResultModel, PropagationNodeModel
 from functools import partial
+from multiprocessing import Pool, Process
+from pathlib import Path
 
 
 def l1_norm(nums):
@@ -29,7 +32,7 @@ class ProcessedIterator:
 
     def __init__(self, raw_items, processing_func, processing_args, processing_kwargs):
         self._raw_items = raw_items
-        self.__func = processing_func
+        self._func = processing_func
         self._args = processing_args
         self._kwargs = processing_kwargs
 
@@ -56,62 +59,113 @@ def calc_pathway_p_value(pathway: Pathway,
     return 1 - sorted_pathway_propagation_scores.index(test_propagation) / len(sorted_pathway_propagation_scores)
 
 
-def result_filter(liquids_filter, nodes_filter, propagation_results: PropagationResultModel):
-    for node in list(propagation_results.nodes.keys()):
-        if nodes_filter(node):
+def filter_results(nodes: Dict[str, PropagationNodeModel], liquids_filter, nodes_filter):
+    for node_name, node in nodes.items():
+        if nodes_filter(node_name):
             node.liquids = {liquid: score for liquid, score in node.liquids.items() if liquids_filter(liquid)}
         else:
-            node.liquids.pop(node)
+            nodes.pop(node_name)
 
 
-def p_value_worker_main(queue,
-                        propagation_under_test_file: str,
-                        randomized_propagations_dir: str,
-                        pathways_file: str,
-                        relevant_liquids: Set = None,
-                        norm="l1"):
+def propagation_to_pathway(pathways: Dict[str, Pathway], norm: str, propagation_result_files: Dict[str, str]):
+    pathway_dict = {pathway_name: dict() for pathway_name in pathways}
+    norm_function = NORM_FUNCTIONS[norm]
+    for file_name, file_path in propagation_result_files.items():
+        nodes = PropagationResultModel.parse_file(file_path).nodes
+        for name, pathway in pathways.items():
+            pathway_dict[name][file_name] = norm_function([norm_function(list(nodes[g].liquids.values())) for g in pathway.genes])
+
+    # TODO actual mechanism for temporary files
+    with open(os.path.join(r"C:\studies\code\NetProp\src\temporary_dir",
+                           f"temp_pathways_{os.getpid()}.json"), 'w') as handler:
+        json.dump(pathway_dict, handler)
+
+
+def load_gene_filtered_pathways(propagation_nodes, pathways_file, relevant_liquids):
     pathways_manager = PathwayManager.from_file_path(pathways_file)
-    prop_under_test = PropagationResultModel.parse_file(propagation_under_test_file)
-    nodes = prop_under_test.nodes
     if relevant_liquids:
         liquid_filter = lambda liquid: liquid in relevant_liquids
     else:
         liquid_filter = lambda liquid: True
-    node_filter = lambda node: node in nodes
-    filter_results = partial(result_filter, liquid_filter, node_filter)
-    filter_results(nodes)
-    tag_unknown_genes(pathways_manager, prop_under_test.nodes)
-
-    while True:
-        request = queue.get(block=True)
-
-        if request == "HALT":
-            break
-        output_path = randomization_request["output_path"]
-        switch_factor = randomization_request["edge_switch_factor"]
-        print(f"now handling request for {output_path}")
-        network = network_loader.load_network()
-        generate_rank_equivalent_random_network(network, switch_factor)
-        network_loader_class.record_network(network, output_path)
-
+    node_filter = lambda node: node in propagation_nodes
+    filter_results(propagation_nodes, liquid_filter, node_filter)
+    tag_unknown_genes(pathways_manager, propagation_nodes)
+    return {name: pathway for name, pathway in pathways_manager.pathways(blacklist={"unknown_genes"})}
 
 # assumption: genes in all randomized propagations are a subset of genes in tested propagation (for tag purposes)
-def record_pathway_p_values(tested_propagation_result_file: str,
-                            randomized_propagations_result_dir: str,
-                            pathways_file: str,
-                            relevant_liquids: Set = None,
-                            norm: str = "l1"):
-    pathway_p_values = dict()
-    for pathway in pathways_manager.pathways(blacklist=["unknown_genes"]):
-        sorted_propagation_values = SortedList([])
-        for file in os.listdir(randomized_propagations_result_dir):
-            prop = PropagationResultModel.parse_file(os.path.join(randomized_propagations_result_dir, file))
-            sorted_propagation_values.add(calc_pathway_propagation(filter_result(prop), pathway, norm=norm))
+def get_pathway_propagation_scores(propagation_under_test_file: str,
+                                   randomized_propagations_result_dir: str,
+                                   pathways_file: str,
+                                   relevant_liquids: Set = None,
+                                   norm: str = "l1"):
 
-        tested_prop_val = calc_pathway_propagation(tested_prop.nodes, pathways_manager, norm=norm)
-        sorted_propagation_values.add(tested_prop_val)
+    # Prepare pathways
+    # pathways_manager = PathwayManager.from_file_path(pathways_file)
+    # prop_under_test = PropagationResultModel.parse_file(propagation_under_test_file)
+    # nodes = prop_under_test.nodes
+    # if relevant_liquids:
+    #     liquid_filter = lambda liquid: liquid in relevant_liquids
+    # else:
+    #     liquid_filter = lambda liquid: True
+    # node_filter = lambda node: node in nodes
+    # filter_results(nodes, liquid_filter, node_filter)
+    # tag_unknown_genes(pathways_manager, prop_under_test.nodes)
+    # filtered_pathways = {name: pathway for name, pathway in pathways_manager.pathways(blacklist={"unknown_genes"})}
+    prop_under_test = PropagationResultModel.parse_file(propagation_under_test_file)
+    filtered_pathways = load_gene_filtered_pathways(prop_under_test.nodes, pathways_file, relevant_liquids)
+    # Prepare map of files to iterate
+    files_dict = {Path(file).stem.split("_")[-1]: os.path.join(randomized_propagations_result_dir, file) for
+                  file in os.listdir(randomized_propagations_result_dir)}
+    files_dict["original"] = propagation_under_test_file
+    files_dict_keys = list(files_dict.keys())
 
-        pathway_p_values[pathway] = \
-            1 - sorted_propagation_values.index(tested_prop.nodes) / len(sorted_propagation_values)
+    # Launch multiprocessed pathway propagation comparison
+    processes = []
+    for i in range(10):
+        partial_files_dict = {k: files_dict[k] for
+                              k in files_dict_keys[i*len(files_dict)//10:(i+1)*len(files_dict)//10]}
+        p = Process(target=propagation_to_pathway,
+                    args=(filtered_pathways, norm, partial_files_dict))
+        p.start()
+        processes.append(p)
 
-    return pathway_p_values
+    for p in processes:
+        p.join()
+
+    # Create unified dict
+    pathway_scores = dict()
+    for file in Path(r'C:\studies\code\NetProp\src\temporary_dir').glob("*.json"):
+        with open(file, 'r') as handler:
+            file_pathways = json.load(handler)
+        if not pathway_scores:
+            pathway_scores = file_pathways
+        else:
+            for pathway in file_pathways:
+                pathway_scores[pathway].update(file_pathways[pathway])
+        os.remove(file)
+
+    return pathway_scores
+
+
+def knockout_folder_pathway_propagations(knockout_folder: str, output_folder: str):
+    files = sorted(list(Path(knockout_folder).glob("*.json")))
+    folders = sorted(list(Path(knockout_folder).glob("*_randomized")))
+    for i in range(len(files)):
+        print(f"now handling {files[i]}")
+        original_pathway_propagation = get_pathway_propagation_scores(files[i], folders[i],
+                                                                      r"C:\studies\code\NetProp\data\c2.cp.v7.4.entrez.gmt")
+        with open(os.path.join(output_folder, files[i].stem + "_pathways.json"), 'w') as handler:
+            json.dump(original_pathway_propagation, handler, indent=4)
+
+
+if __name__ == "__main__":
+    knockout_folder_pathway_propagations(r'C:\studies\code\NetProp\src\temp\propagations\high_propagation_knockouts',
+                                         r'C:\studies\code\NetProp\src\temp\knockout_pathways_enrichment\high_propagation')
+    # pathway_propagations = \
+    #     get_pathway_propagation_scores(r"C:\studies\code\NetProp\src\temp\propagations\knockouts\merged_covid_source.json",
+    #                                    r"C:\studies\code\NetProp\src\temp\propagations\knockouts\merged_covid_source_randomized",
+    #                                    r"C:\studies\code\NetProp\data\c2.cp.v7.4.entrez.gmt")
+    # assert all([len(v) == 100 for v in pathway_propagations.values()])
+    # with open(os.path.join(r"C:\studies\code\NetProp\src\temp\knockout_pathways_enrichment", "merged_covid_source_pathways.json"), 'w') as handler:
+    #     json.dump(pathway_propagations, handler, indent=4)
+

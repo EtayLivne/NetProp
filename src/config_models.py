@@ -61,8 +61,6 @@ class HaltConditionOptionModel(BaseModel):
     #         raise ValueError("in halt condition of type {} field {} is not applicable".format(values["type"], v))
 
 
-
-
 class PropagationParametersModel(BaseModel):
     prior_set: Optional[List[PropagationSourceModel]]
     target_set: List[PropagationTargetModel] = Field(default_factory=set)
@@ -71,11 +69,12 @@ class PropagationParametersModel(BaseModel):
     halt_conditions: Optional[HaltConditionOptionModel]
     method: str = Propagater.ITERATIVE
     id: Optional[str] = None
+    output_dir_path: Optional[str]
 
     # this model has all optional fields intentionally so that they may be filled after creation.
     # this method validates that all fields are ready
     def validate_completeness(self):
-        return self.prior_set and self.prior_set_confidence and self.halt_conditions
+        return self.prior_set and self.prior_set_confidence and self.halt_conditions and self.output_dir_path
 
     @validator('prior_set_confidence')
     def confidence_is_valid_probability(cls, v):
@@ -88,5 +87,5 @@ class ConfigModel(BaseModel):
     ppi_config: PPIModel
     global_propagation_params: Optional[PropagationParametersModel]
     propagations: List[PropagationParametersModel]
-    output_dir_path: str
+
 

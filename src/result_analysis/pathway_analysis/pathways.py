@@ -18,7 +18,7 @@ class Pathway(BaseModel):
 
 class PathwayExtractor(BaseFileDataExtractor):
     def _extract(self):
-        pathway_manager = PathwayManager
+        pathway_manager = PathwayManager()
         with open(self.file_path, 'r') as handler:
             for line in handler.readlines():
                 as_list = line.split()
@@ -55,15 +55,17 @@ class PathwayManager:
             pathway = self._pathways[pathway_name]
         except KeyError:
             raise ValueError(f"no pathway named {pathway_name}")
+        if not pathway.tags:
+            pathway.tags = set()
         pathway.tags.add(tag)
 
-    def pathways(self, blacklist=None, whitelist=None):
+    def pathways(self, blacklist: set = None, whitelist: set = None):
         blacklist = blacklist or set()
         whitelist = whitelist or set()
-        for pathway_name in self._pathways:
-            tags = pathway_name.tags or set()
+        for pathway_name, pathway in self._pathways.items():
+            tags = pathway.tags or set()
             if whitelist.issubset(tags) and not blacklist.intersection(tags):
-                yield pathway_name, self._pathways[pathway_name]
+                yield pathway_name, pathway
 
     def _get(self, pathway_name, default=None):
         return self._pathways.get(pathway_name, default)

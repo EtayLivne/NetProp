@@ -56,22 +56,19 @@ class CovidToHumanNetworkLoader(PPINetworkLoader):
     def load_network(self, **kwargs):
         raw_network = ndex2.create_nice_cx_from_file(self.network_source_path)
         nx_network = raw_network.to_networkx(mode="default")
-        if kwargs.get("normalize", False):
+        if not kwargs.get("raw", False):
             normalized_network = nx.Graph()
             path_to_translation_file = kwargs.get("translation_file_path", self._DEFAULT_PATH_TO_ID_TRANSLATION_FILE)
             symbol_to_id_translator = GeneinfoToEntrezID(path_to_translation_file)
-            debug_count = 0
             for edge in nx_network.edges(data=True):
                 data = edge[2]
                 if "MIST" not in data:
                     continue
                 source_symbol, target_symbol = data["name"].lower().split(' (interacts with) ')
-                try:
-                    target = str(symbol_to_id_translator.translate(target_symbol))
-                except ValueError:
-                    print(f"could not add edge for target symbol {target_symbol}")
+                if kwargs.get("merge_covid", False):
+                    source_symbol = "covid"
+                target = str(symbol_to_id_translator.translate(target_symbol))
                 if source_symbol not in normalized_network.nodes:
-                    debug_count += 1
                     normalized_network.add_node(source_symbol, **self._new_node_attrs(SpeciesIDs.CORONAVIRUS.value))
                 if target not in normalized_network.nodes:
                     normalized_network.add_node(target, **self._new_node_attrs(SpeciesIDs.HUMAN.value))
@@ -89,7 +86,7 @@ class HumanCovidHybridNetworkLoader(HSapeinsNetworkLoader):
         # initialize network as human only, then add in coronavirus
         hybrid_network = super().load_network()
         covid_ppi_path = kwargs.get("covid_ppi_path", self._DEFAULT_PATH_TO_COVID_PPI_FILE)
-        covid_to_human_network = CovidToHumanNetworkLoader(covid_ppi_path).load_network(normalize=True)
+        covid_to_human_network = CovidToHumanNetworkLoader(covid_ppi_path).load_network(merge_covid=True)
         hybrid_network.add_nodes_from([(node, data) for node, data in covid_to_human_network.nodes(data=True) if
                                        data[NodeAttrs.SPECIES_ID.value] == SpeciesIDs.CORONAVIRUS.value])
         hybrid_network.add_edges_from(covid_to_human_network.edges(data=True))
