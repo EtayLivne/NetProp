@@ -1,4 +1,4 @@
-from result_analysis.pathway_analysis.pathways import Pathway, PathwayManager, tag_unknown_genes
+from result_analysis.pathways.pathways import Pathway, PathwayManager, tag_unknown_genes
 
 import json
 import os
@@ -10,70 +10,16 @@ from functools import partial
 from multiprocessing import Pool, Process
 from pathlib import Path
 
-
-def l1_norm(nums):
-    return sum(nums)
-
-
-def l2_norm(nums):
-    return sqrt(sum([num ** 2 for num in nums]))
-
-
-NORM_FUNCTIONS = {
-    "l1": l1_norm,
-    "l2": l2_norm
-}
-
-
-class ProcessedIterator:
-    """
-    A list iterator that yields the result of activating a function on each element rather than the elements themselves
-    """
-
-    def __init__(self, raw_items, processing_func, processing_args, processing_kwargs):
-        self._raw_items = raw_items
-        self._func = processing_func
-        self._args = processing_args
-        self._kwargs = processing_kwargs
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        for item in self._raw_items:
-            yield self._func(item, *self._args, **self._kwargs)
-
-
-def calc_pathway_propagation(nodes: dict, pathway: Pathway, norm="l1"):
-    return NORM_FUNCTIONS[norm]([nodes[n].get("liquids", dict()).values() for n in pathway.genes])
-
-
-def calc_pathway_p_value(pathway: Pathway,
-                         tested_propagation_nodes: dict, randomized_propagation_nodes: List[dict],
-                         norm="l1"):
-    # initializing the SortedList item from a custom iterator to avoid copying the original list during SortedList construction
-    pathway_propagation_score_iterator = ProcessedIterator(randomized_propagation_nodes, [pathway], {"norm": norm})
-    sorted_pathway_propagation_scores = SortedList(pathway_propagation_score_iterator)
-    test_propagation = calc_pathway_propagation(tested_propagation_nodes, pathway, norm=norm)
-    sorted_pathway_propagation_scores.add(test_propagation)
-    return 1 - sorted_pathway_propagation_scores.index(test_propagation) / len(sorted_pathway_propagation_scores)
-
-
-def filter_results(nodes: Dict[str, PropagationNodeModel], liquids_filter, nodes_filter):
-    for node_name, node in nodes.items():
-        if nodes_filter(node_name):
-            node.liquids = {liquid: score for liquid, score in node.liquids.items() if liquids_filter(liquid)}
-        else:
-            nodes.pop(node_name)
+from result_analysis.utils import filter_results, propagation_to_node_subset
 
 
 def propagation_to_pathway(pathways: Dict[str, Pathway], norm: str, propagation_result_files: Dict[str, str]):
     pathway_dict = {pathway_name: dict() for pathway_name in pathways}
-    norm_function = NORM_FUNCTIONS[norm]
     for file_name, file_path in propagation_result_files.items():
         nodes = PropagationResultModel.parse_file(file_path).nodes
         for name, pathway in pathways.items():
-            pathway_dict[name][file_name] = norm_function([norm_function(list(nodes[g].liquids.values())) for g in pathway.genes])
+            pathway_dict[name][file_name] = propagation_to_node_subset(nodes, pathway.genes,
+                                                                       nodes_norm=norm, liquids_norm=norm)
 
     # TODO actual mechanism for temporary files
     with open(os.path.join(r"C:\studies\code\NetProp\src\temporary_dir",
@@ -91,6 +37,7 @@ def load_gene_filtered_pathways(propagation_nodes, pathways_file, relevant_liqui
     filter_results(propagation_nodes, liquid_filter, node_filter)
     tag_unknown_genes(pathways_manager, propagation_nodes)
     return {name: pathway for name, pathway in pathways_manager.pathways(blacklist={"unknown_genes"})}
+
 
 # assumption: genes in all randomized propagations are a subset of genes in tested propagation (for tag purposes)
 def get_pathway_propagation_scores(propagation_under_test_file: str,

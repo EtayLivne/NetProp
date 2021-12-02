@@ -83,7 +83,7 @@ def simple_generate_rank_equivalent_network(network: nx.Graph, edge_switch_facto
         switches -= 1
 
 
-def randomizer_main(original_network_file, network_loader_class, queue):
+def randomizing_worker_main(original_network_file, network_loader_class, queue):
     network_loader = network_loader_class(original_network_file)
 
     while True:
@@ -102,11 +102,11 @@ def randomizer_main(original_network_file, network_loader_class, queue):
 def randomize_network(number_of_randomizations, edge_switch_factor, original_network_file,
                       network_loader_class, output_dir):
     queue = Queue()
-    randomizers = Pool(10, randomizer_main, (original_network_file, network_loader_class, queue))
+    randomizers = Pool(12, randomizing_worker_main, (original_network_file, network_loader_class, queue))
     original_network_name = os_path.basename(original_network_file).split(".")[0]
     for i in range(number_of_randomizations):
         queue.put({"edge_switch_factor": edge_switch_factor,
-                   "output_path": os_path.join(output_dir, original_network_name + f"_{i}")})
+                   "output_path": os_path.join(output_dir, original_network_name + f"_{110 + i}")})
 
     for i in range(10):
         queue.put("HALT")
@@ -118,6 +118,6 @@ def randomize_network(number_of_randomizations, edge_switch_factor, original_net
 
 
 if __name__ == "__main__":
-    randomize_network(100, 10,
+    randomize_network(400, 10,
                       r"C:\studies\code\NetProp\data\H_sapiens\H_spaiens_nov_2021.net", network_loaders.HumanCovidHybridNetworkLoader,
                       r"C:\studies\code\NetProp\data\randomized_h_sapiens_with_covid")

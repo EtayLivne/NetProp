@@ -31,7 +31,7 @@ def propagate_a_lot(matrix_config_path: str):
     singular_config = load_config(config.singular_config_path)
     suppressed_duplicates = config.suppressed_duplicates or dict()
 
-    duplicate_configurations_with_suppressed_nodes(singular_config.propagations,suppressed_duplicates)
+    duplicate_configurations_with_suppressed_nodes(singular_config.propagations, suppressed_duplicates)
     for propagation in singular_config.propagations:
         propagation.output_dir_path = config.output_root_dir
 
