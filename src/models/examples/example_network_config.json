@@ -1,0 +1,13 @@
+[
+  {
+    "id": "dummy_too",
+    "loader_class": "HSapeinsNetworkLoader",
+    "init_args": [
+      "C:\\studies\\thesis\\code\\NetProp\\data\\H_sapiens\\H_spaiens_nov_2021.net"
+    ],
+    "metadata": {
+      "directed": false,
+      "id_type": "entrezgene"
+    }
+  }
+]
