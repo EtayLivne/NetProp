@@ -1,10 +1,12 @@
-from network_loader import BaseNetworkLoader
-from common.data_handlers.extractors import HSapiensExtractor
-from common.data_handlers.translators import GeneinfoToEntrezID
-from propagater import PropagationNetwork, PropagationContainer
-from constants import SpeciesIDs, NodeAttrs
 import ndex2.client
 import networkx as nx
+
+from utils.constants import SpeciesIDs, NodeAttrs
+from networks.network_loader import BaseNetworkLoader
+from utils.data_handlers.extractors import HSapiensExtractor
+from utils.data_handlers.translators import GeneinfoToEntrezID
+from propagation.classes import PropagationNetwork, PropagationContainer
+
 
 class PPINetworkLoader(BaseNetworkLoader):
     SPECIES_ID_KEY = NodeAttrs.SPECIES_ID.value
@@ -22,14 +24,15 @@ class PPINetworkLoader(BaseNetworkLoader):
             PropagationNetwork.EDGE_WEIGHT: weight
         }
 
+
 class HSapeinsNetworkLoader(PPINetworkLoader):
     HUMAN_SPECIES_ID = SpeciesIDs.HUMAN.value
 
     def __init__(self, network_soruce_path):
-        super().__init__(network_soruce_path)
+        self.network_source_path = network_soruce_path
         self.network_extractor = HSapiensExtractor(self.network_source_path)
 
-    def load_network(self, **kwargs):
+    def load(self, *args, **kwargs):
         network = PropagationNetwork()
         edge_triplets = self.network_extractor.extract()
         for edge_triplet in edge_triplets:
@@ -50,10 +53,11 @@ class HSapeinsNetworkLoader(PPINetworkLoader):
                 weight = edge_data[2][PropagationNetwork.EDGE_WEIGHT]
                 handler.write(f"{source}\t{target}\t{weight}\n")
 
-class CovidToHumanNetworkLoader(PPINetworkLoader):
-    _DEFAULT_PATH_TO_ID_TRANSLATION_FILE = r"C:\studies\code\NetProp\data\gene_symbol_to_entrezgeneid_new.json"
 
-    def load_network(self, **kwargs):
+class CovidToHumanNetworkLoader(PPINetworkLoader):
+    _DEFAULT_PATH_TO_ID_TRANSLATION_FILE = r"C:\studies\thesis\code\NetProp\data\symbol_to_entrezgene_2021.json"
+
+    def load(self, *args, **kwargs):
         raw_network = ndex2.create_nice_cx_from_file(self.network_source_path)
         nx_network = raw_network.to_networkx(mode="default")
         if not kwargs.get("raw", False):
@@ -67,7 +71,7 @@ class CovidToHumanNetworkLoader(PPINetworkLoader):
                 source_symbol, target_symbol = data["name"].lower().split(' (interacts with) ')
                 if kwargs.get("merge_covid", False):
                     source_symbol = "covid"
-                target = str(symbol_to_id_translator.translate(target_symbol))
+                target = str(symbol_to_id_translator.translate(target_symbol.upper()))
                 if source_symbol not in normalized_network.nodes:
                     normalized_network.add_node(source_symbol, **self._new_node_attrs(SpeciesIDs.CORONAVIRUS.value))
                 if target not in normalized_network.nodes:
@@ -80,11 +84,11 @@ class CovidToHumanNetworkLoader(PPINetworkLoader):
 
 class HumanCovidHybridNetworkLoader(HSapeinsNetworkLoader):
     CORONAVIRUS_SPECIES_ID = SpeciesIDs.CORONAVIRUS.value
-    _DEFAULT_PATH_TO_COVID_PPI_FILE = r"C:\studies\code\NetProp\data\ndex_covid_human_ppi.cx"
+    _DEFAULT_PATH_TO_COVID_PPI_FILE = r"C:\studies\thesis\code\NetProp\data\ndex_covid_human_ppi.cx"
 
-    def load_network(self, **kwargs):
+    def load(self, *args, **kwargs):
         # initialize network as human only, then add in coronavirus
-        hybrid_network = super().load_network()
+        hybrid_network = super().load()
         covid_ppi_path = kwargs.get("covid_ppi_path", self._DEFAULT_PATH_TO_COVID_PPI_FILE)
         covid_to_human_network = CovidToHumanNetworkLoader(covid_ppi_path).load_network(merge_covid=True)
         hybrid_network.add_nodes_from([(node, data) for node, data in covid_to_human_network.nodes(data=True) if

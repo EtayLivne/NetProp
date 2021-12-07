@@ -1,5 +1,5 @@
-from core.data_handlers.translators import AbstractDataTranslator, BaseTranslationMap
-from common.data_handlers.extractors import JsonExtractor, CSVExtractor
+from utils.data_handlers.base_classes import AbstractDataTranslator, BaseTranslationMap
+from utils.data_handlers.extractors import JsonExtractor, CSVExtractor
 
 
 class GeneinfoToEntrezID(AbstractDataTranslator):

@@ -1,5 +1,46 @@
+from os import path as os_path
 from abc import ABCMeta, abstractmethod
-from math import floor
+
+class AbstractDataExtractor(metaclass=ABCMeta):
+    @abstractmethod
+    def extract(self):
+        raise NotImplemented
+
+
+class BaseFileDataExtractor(AbstractDataExtractor, metaclass=ABCMeta):
+    def __init__(self, file_path=None):
+        self.file_path = file_path
+
+    @property
+    def file_path(self):
+        return self._file_path
+
+    @file_path.setter
+    def file_path(self, var):
+        if not os_path.isfile(var):
+            raise ValueError(f"file {var} not found")
+        self._file_path = var
+
+    def _validate_path(self):
+        if not os_path.isfile(self.file_path):
+            raise FileNotFoundError
+
+    @abstractmethod
+    def _extract(self):
+        raise NotImplemented
+
+    def extract(self, file_path=None):
+        if file_path:
+            self.file_path = file_path
+        self._validate_path()
+        return self._extract()
+
+
+class AbstractWebAPIDataExtractor(AbstractDataExtractor, metaclass=ABCMeta):
+    pass
+
+
+
 
 class AbstractDataTranslator(metaclass=ABCMeta):
     @abstractmethod
@@ -61,5 +102,3 @@ class BaseTranslationMap(metaclass=ABCMeta):
                 raise ValueError(f'Could not translate {key} because it does not exist in the translation map')
             self._insert_to_reverse_map({key: value})
         return self._reverse_map[key]
-
-

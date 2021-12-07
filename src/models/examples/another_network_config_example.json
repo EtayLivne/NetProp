@@ -1,0 +1,27 @@
+[
+  {
+    "id": "dummy_foolder",
+    "loader_class": "FolderLoader",
+    "multi": true,
+    "init_args": [
+      "HSapeinsNetworkLoader", "C:\\studies\\thesis\\code\\NetProp\\data\\H_sapiens"
+    ],
+    "init_kwargs": {
+      "metadata": {
+      "directed": false,
+      "id_type": "entrezgene"
+      }
+    }
+  },
+  {
+    "id": "dummy",
+    "loader_class": "HSapeinsNetworkLoader",
+    "init_args": [
+      "C:\\studies\\thesis\\code\\NetProp\\data\\H_sapiens\\H_sapiens_nov_2020.net"
+    ],
+    "metadata": {
+      "directed": false,
+      "id_type": "entrezgene"
+    }
+  }
+]

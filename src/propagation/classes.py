@@ -1,22 +1,20 @@
-from math import sqrt
-from itertools import chain
-from pydantic.dataclasses import dataclass
-from pydantic import Field
 from typing import Set
-import networkx as nx
-import numpy.lib.scimath as np_scimath
+from itertools import chain
+
 import numpy as np
 import scipy as sp
 import scipy.linalg
 from scipy.sparse.linalg import inv
-
-
+import numpy.lib.scimath as np_scimath
+import networkx as nx
+from pydantic import Field
+from pydantic.dataclasses import dataclass
 
 
 @dataclass
 class PropagationContainer:
     source_of: Set[str] = Field(default_factory=set)
-    target_of: Set[str] = Field(default_factory=set)
+    # target_of: Set[str] = Field(default_factory=set)  #TODO delete if we officially give up on target sets
 
 
 class PropagationNetwork(nx.Graph):
@@ -56,6 +54,10 @@ class Propagater:
     @staticmethod
     def _edge_degree_coef(node1_deg, node2_deg):
         return float(2) / (node1_deg + node2_deg)
+
+    @classmethod
+    def propagation_related_node_metadata(cls):
+        return [cls._LIQUIDS, cls._PREV_LIQUIDS, PropagationNetwork.CONTAINER_KEY]
 
     def __init__(self, network, source_confidence, min_gap=NO_MIN_GAP, max_steps=NO_MAX_STEPS):
         self.network = network

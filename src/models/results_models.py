@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, Set, List, Dict
-from config_models import ProteinIDs, HaltConditionOptionModel
-from constants import SpeciesIDs
+from models.config_models import HaltConditionOptionModel
 
 
 class PropagationNetworkModel(BaseModel):
@@ -14,12 +13,14 @@ class PropagationNetworkModel(BaseModel):
 class PropagationNodeModel(BaseModel):
     id: str
     source_of: Set[str]
-    target_of: Set[str]
+    # target_of: Set[str] #TODO delete if /when we retire target sets
     rank: Optional[int]
     liquids: Dict[str, float]
+    metadata: Dict
 
     class Config:
         json_encoders = {set: list}
+        use_enum_values = True
 
     def __hash__(self):
         return int(self.id)
@@ -28,17 +29,9 @@ class PropagationNodeModel(BaseModel):
         return self.__hash__() == other.__hash__()
 
 
-class PropagationProteinModel(PropagationNodeModel):
-    id_type: ProteinIDs
-    species: SpeciesIDs
-
-    class Config(PropagationNodeModel.Config):
-        use_enum_values = True
-
-
 class PropagationResultModel(BaseModel):
     id: str
-    network: PropagationNetworkModel
+    network: dict
     nodes: Dict[str, PropagationNodeModel]
     prior_set_confidence: float
     halt_conditions: HaltConditionOptionModel
