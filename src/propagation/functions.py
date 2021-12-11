@@ -3,14 +3,18 @@ from pathlib import Path
 from datetime import datetime
 from multiprocessing import Pool, Queue, cpu_count
 
-from utils.utils import listify
-from networks.network_loader import BaseNetworkLoader
-import networks.single_network_loaders as network_loaders
-import networks.multi_network_loaders as multi_network_loaders
+from generic_utils.utils import listify
+from networks.loaders.base import BaseNetworkLoader
+import networks.loaders.single as network_loaders
+import networks.loaders.multi as multi_network_loaders
 from propagation.classes import Propagater, PropagationNetwork
 from models.config_models import ConfigModel, NetworksParametersModel, SuppressedSetModel
 from networks.network_config_utils import single_network_config_iter, network_from_config
 from models.results_models import PropagationResultModel, HaltConditionOptionModel, PropagationNodeModel
+
+NETWORK_ORDERING_KEYWORD = "network"
+PRIOR_SET_ORDERING_KEYWORD = "prior_set"
+SUPPRESSED_NODES_ORDERING_KEYWORD = "suppressed_nodes"
 
 
 def record_propagation_result(propagater, suppressed_nodes, file_path, propagation_id):
@@ -70,11 +74,28 @@ def propagation_worker(network_conf, loader_classes, queue):
         propagation_config = queue.get(block=True)
         if propagation_config == "HALT":
             break
-        print(f"Now propagating {propagation_config.id}")
+        print(f"Now propagating {propagation_config.output_dir_path} - {propagation_config.id}")
         propagate(network, propagation_config, propagation_config.output_dir_path)
 
 
-def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count()):
+def determine_output_path(ordering: dict,
+                          network_name: str, prior_set_name: str, suppressed_set_name: str,
+                          root_output_path: str):
+
+    ordered_names = sorted([(NETWORK_ORDERING_KEYWORD, network_name),
+                            (PRIOR_SET_ORDERING_KEYWORD, prior_set_name),
+                            (SUPPRESSED_NODES_ORDERING_KEYWORD, suppressed_set_name)],
+                           key=lambda tup: ordering.get(tup[0], -1))
+    filtered_ordered_names = [tup[1] for tup in ordered_names if ordering.get(tup[0], -1) > 0]
+    output_dir = Path(root_output_path) / "/".join(filtered_ordered_names[:-1])
+    Path.mkdir(output_dir, exist_ok=True, parents=True)
+    return output_dir / filtered_ordered_names[-1]
+
+
+def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count(), ordering=None):
+    if ordering is None:
+        ordering = {NETWORK_ORDERING_KEYWORD: 0, PRIOR_SET_ORDERING_KEYWORD: 1, SUPPRESSED_NODES_ORDERING_KEYWORD: 2}
+
     _name, _cls = 0, 1
     loader_classes = {item[_name]: item[_cls] for item in
                       inspect.getmembers(network_loaders, inspect.isclass) + inspect.getmembers(multi_network_loaders, inspect.isclass)
@@ -89,28 +110,28 @@ def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count
         if not network_conf.id:
             network_conf.id = f"network_{network_counter}"
             network_counter += 1
-        network_dir = Path(config.output_dir_path) / str(network_conf.id)
-        network_dir.mkdir(exist_ok=True)
+
         queue = Queue()
-        specific_config = config.copy()
         prior_set_counter = 0
         suppressed_nodes_counter = 0
         for prior_set in prior_sets:
             if not prior_set.id:
                 prior_set.id = f"prior_set_{prior_set_counter}"
                 prior_set_counter += 1
-            prior_set_dir = network_dir / str(prior_set.id)
-            prior_set_dir.mkdir(exist_ok=True)
 
             for suppressed_nodes in suppressed_nodes_sets:
                 if not suppressed_nodes.id:
                     suppressed_nodes.id = f"knockout_set_{suppressed_nodes_counter}"
                     suppressed_nodes_counter += 1
 
+                output_path = determine_output_path(ordering,
+                                                    network_conf.id, prior_set.id, suppressed_nodes.id,
+                                                    config.output_dir_path)
+                specific_config = config.copy()
                 specific_config.prior_set = prior_set
-                specific_config.output_dir_path = prior_set_dir
                 specific_config.suppressed_set = suppressed_nodes
-                specific_config.id = suppressed_nodes.id
+                specific_config.output_dir_path = str(output_path.parent)
+                specific_config.id = str(output_path.name)
 
                 queue.put(specific_config)
 
@@ -125,15 +146,22 @@ def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count
 
 
 # This wrapper function is here to make it easy to integrate configuration duplicates in the future.
-def propagate_from_config(config_path):
-    config = ConfigModel.parse_file(config_path)
+def propagate_from_config(config_path, ordering=None):
+    import json
+    #TODO appears to be an internal bug in pydantic that doesn't allow it to read suppressed nodes - restore to commented line when it is resolved
+    # config = ConfigModel.parse_file(config_path)
+    with open(config_path, 'r') as handler:
+        x = json.load(handler)
+    config = ConfigModel.parse_obj(x)
+    config.suppressed_set = [SuppressedSetModel.parse_obj(y) for y in x["suppressed_set"]]
     if config.suppressed_set is None:
         config.suppressed_set = SuppressedSetModel(id="no_knockouts")
     if not config.output_dir_path:
         config.output_dir_path = Path.cwd()
 
-    launch_multiprocess_propagation(config)
+    launch_multiprocess_propagation(config, ordering=ordering)
 
 
 if __name__ == "__main__":
-    propagate_from_config(r"/temp/configurations/new/dummy.json")
+    propagate_from_config(r"C:\studies\thesis\code\temp\configurations\new\covid_neighbors_knockout_conf.json",
+                          ordering={SUPPRESSED_NODES_ORDERING_KEYWORD: 1, NETWORK_ORDERING_KEYWORD: 2})

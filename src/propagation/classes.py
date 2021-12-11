@@ -137,7 +137,7 @@ class Propagater:
         self._suppress_nodes(suppressed_nodes=suppressed_set)
         adjacency_matrix = nx.to_scipy_sparse_matrix(self.network)
         # TODO remove passing of suppressed nodes - this is purely for debugging!
-        adjacency_matrix = self._normalize_edge_weights(adjacency_matrix, suppressed_nodes=suppressed_set)
+        adjacency_matrix = self._normalize_edge_weights(adjacency_matrix)
         liquids = {}
         for prior in prior_set:
             for liquid in self.network.nodes[prior][self.network.CONTAINER_KEY].source_of:
@@ -176,10 +176,7 @@ class Propagater:
 
     #TODO support multiple forms of normalization (via parameter in propagation config)
     # Only works for symmetric (i.e undirected) networks!
-    def _normalize_edge_weights(self, adjacency_matrix, apply_confidence_coef=True, suppressed_nodes=None):
-        # TODO: remove this if and the print within it, they are purely for debugging.
-        # if any(num == 0 for num in adjacency_matrix.sum(0).A1):
-        #     print(f"zero division for {suppressed_nodes}")
+    def _normalize_edge_weights(self, adjacency_matrix, apply_confidence_coef=True):
         weighted_deg_matrix = sp.sparse.diags(1 / np_scimath.sqrt(adjacency_matrix.sum(0).A1), format="csr")
         coef = 1 - self.source_confidence if apply_confidence_coef else 1
         return coef * weighted_deg_matrix * adjacency_matrix * weighted_deg_matrix

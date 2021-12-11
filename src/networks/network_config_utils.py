@@ -3,8 +3,8 @@ import json
 from typing import List
 from pathlib import Path
 
-from utils.utils import listify
-from networks.network_loader import MultiNetworkLoader
+from generic_utils.utils import listify
+from networks.loaders.base import MultiNetworkLoader
 from models.config_models import NetworksParametersModel, NetworkInclusionParametersModel
 
 
@@ -16,7 +16,7 @@ def _load(config: NetworksParametersModel, loader_classes):
     loader_class = loader_classes.get(config.loader_class, None)
     if not loader_class:
         raise ValueError(f"No network loader named {config.loader_class} detected")
-    if config.multi != isinstance(loader_class, MultiNetworkLoader):
+    if config.multi != issubclass(loader_class, MultiNetworkLoader):
         raise ValueError(f"network {config.id}  multi value {config.multi} doesn't match network loader {config.loader_class}")
     loader = loader_class(*config.init_args, **config.init_kwargs)
     return loader.load()
@@ -91,19 +91,15 @@ def single_network_config_iter(config: NetworkInclusionParametersModel, loader_c
     network_config_files = _get_all_config_files(sources)
 
     unpacked_configs = []
+    unique_ids = {}
     for config_file in network_config_files:
         if not _file_passes_filter(config, config_file):
             continue
 
         with open(config_file, 'r') as handler:
-            configs = json.load(handler)
-            configs = listify(configs)
-            if not isinstance(configs, list):
-                configs = [configs]
+            configs = listify(json.load(handler))
 
         # Handle multinetwork configs and create a flat list of single network configs, where each ID is unique
-
-        unique_ids = {}
         for network_conf in configs:
             c = NetworksParametersModel.parse_obj(network_conf)
             if not _id_passes_filter(config, c.id):
@@ -112,6 +108,8 @@ def single_network_config_iter(config: NetworkInclusionParametersModel, loader_c
 
             for new_conf in new_configs:
                 _add_to_unqiue_id_list(new_conf, unique_ids, unpacked_configs)
+                if not [x for x in unpacked_configs if x.id == "combined_human_merged_covid"]:
+                    x = 7
 
     for network_conf in unpacked_configs:
         yield network_conf
