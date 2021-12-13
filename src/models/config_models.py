@@ -11,7 +11,8 @@ class PropagationSourceModel(BaseModel):
     source_of_key: ClassVar[str] = "source_of"
 
     id: str
-    source_of: Set[str]
+    source_of: List[str]
+
     def __hash__(self):
         return int(self.id)
 

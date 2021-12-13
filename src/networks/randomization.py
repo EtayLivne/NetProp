@@ -3,7 +3,7 @@ from random import choice
 import os.path as os_path
 from multiprocessing import Queue, Pool
 
-import networks.single_network_loaders as network_loaders
+import networks.loaders.single as network_loaders
 
 
 def generate_rank_equivalent_network(network: nx.Graph, edge_switch_factor):
@@ -80,5 +80,5 @@ def randomize_network(number_of_randomizations, edge_switch_factor, original_net
 
 if __name__ == "__main__":
     randomize_network(400, 10,
-                      r"C:\studies\code\NetProp\data\H_sapiens\H_spaiens_nov_2021.net", network_loaders.HumanCovidHybridNetworkLoader,
+                      r"C:\studies\code\NetProp\data\H_sapiens\H_spaiens_nov_2021.net", network_loaders.CombinedHumanCovidNetworkLoader,
                       r"C:\studies\code\NetProp\data\randomized_h_sapiens_with_covid")

@@ -2,7 +2,7 @@ import csv
 import json
 import ndex2.client
 from mygene import MyGeneInfo
-from utils.data_handlers.base_classes import BaseFileDataExtractor, AbstractWebAPIDataExtractor
+from generic_utils.data_handlers.base_classes import BaseFileDataExtractor, AbstractWebAPIDataExtractor
 
 
 class HSapiensExtractor(BaseFileDataExtractor):
