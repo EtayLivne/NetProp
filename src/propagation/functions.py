@@ -3,7 +3,8 @@ from pathlib import Path
 from datetime import datetime
 from multiprocessing import Pool, Queue, cpu_count
 
-from generic_utils.utils import listify
+from env import VOLUME_ROOT
+from generic_utils.utils import listify, attach_to_root
 from networks.loaders.base import BaseNetworkLoader
 import networks.loaders.single as network_loaders
 import networks.loaders.multi as multi_network_loaders
@@ -156,12 +157,11 @@ def propagate_from_config(config_path, ordering=None):
     config.suppressed_set = [SuppressedSetModel.parse_obj(y) for y in x["suppressed_set"]]
     if config.suppressed_set is None:
         config.suppressed_set = SuppressedSetModel(id="no_knockouts")
+
+    # attach path to volume root
     if not config.output_dir_path:
-        config.output_dir_path = Path.cwd()
+        config.output_dir_path = VOLUME_ROOT
+    # else:
+    #     config.output_dir_path = attach_to_root(config.output_dir_path)
 
     launch_multiprocess_propagation(config, ordering=ordering)
-
-
-if __name__ == "__main__":
-    propagate_from_config(r"C:\studies\thesis\code\temp\configurations\new\covid_neighbors_knockout_conf.json",
-                          ordering={SUPPRESSED_NODES_ORDERING_KEYWORD: 1, NETWORK_ORDERING_KEYWORD: 2})
