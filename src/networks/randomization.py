@@ -1,3 +1,4 @@
+import sys
 import networkx as nx
 from random import choice
 import os.path as os_path
@@ -80,6 +81,12 @@ def randomize_network(number_of_randomizations, edge_switch_factor,
 
 
 if __name__ == "__main__":
-    randomize_network(500, 10, network_loaders.CombinedHumanCovidNetworkLoader,
-                      [r"D:\H_sapiens\H_sapiens_aug_2020.net", r"C:\studies\thesis\code\NetProp\data\HEK293T_SARS-CoV-2 (1).cx", r"D:\symbol_to_entrezgene_2021.json"], dict(),
-                      r"D:\randomized_h_sapiens")
+    num_randomizations = sys.argv[1]
+    edge_switch_fator = sys.argv[2]
+    human_ppi_path = sys.argv[3]
+    cov_to_human_ppi_path = sys.argv[4]
+    translator_path = sys.argv[5]
+    output_dir_path = sys.argv[6]
+    randomize_network(num_randomizations, edge_switch_fator, network_loaders.CombinedHumanCovidNetworkLoader,
+                      [human_ppi_path,cov_to_human_ppi_path, translator_path], dict(),
+                      output_dir_path)
