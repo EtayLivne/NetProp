@@ -93,7 +93,7 @@ def determine_output_path(ordering: dict,
     return output_dir / filtered_ordered_names[-1]
 
 
-def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count(), ordering=None):
+def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count() - 2, ordering=None):
     if ordering is None:
         ordering = {NETWORK_ORDERING_KEYWORD: 0, PRIOR_SET_ORDERING_KEYWORD: 1, SUPPRESSED_NODES_ORDERING_KEYWORD: 2}
 

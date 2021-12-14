@@ -1,7 +1,7 @@
 import networkx as nx
 from random import choice
 import os.path as os_path
-from multiprocessing import Queue, Pool
+from multiprocessing import Queue, Pool, cpu_count
 
 import networks.loaders.single as network_loaders
 
@@ -44,9 +44,9 @@ def generate_rank_equivalent_network(network: nx.Graph, edge_switch_factor):
         switches -= 1
 
 
-def _randomizing_worker_main(original_network_file, network_loader_class, queue):
-    network_loader = network_loader_class(original_network_file)
-
+def _randomizing_worker_main(network_loader_class, network_loader_args, network_loader_kwargs, queue):
+    network_loader = network_loader_class(*network_loader_args, **network_loader_kwargs)
+    network = network_loader.load()
     while True:
         randomization_request = queue.get(block=True)
 
@@ -55,21 +55,22 @@ def _randomizing_worker_main(original_network_file, network_loader_class, queue)
         output_path = randomization_request["output_path"]
         switch_factor = randomization_request["edge_switch_factor"]
         print(f"now handling request for {output_path}")
-        network = network_loader.load_network()
         generate_rank_equivalent_network(network, switch_factor)
         network_loader_class.record_network(network, output_path)
 
 
-def randomize_network(number_of_randomizations, edge_switch_factor, original_network_file,
-                      network_loader_class, output_dir):
+def randomize_network(number_of_randomizations, edge_switch_factor,
+                      network_loader_class, network_loadr_args, network_loader_kwargs, output_dir):
+    num_workers = cpu_count() - 2
     queue = Queue()
-    randomizers = Pool(12, _randomizing_worker_main, (original_network_file, network_loader_class, queue))
-    original_network_name = os_path.basename(original_network_file).split(".")[0]
+    randomizers = Pool(num_workers, _randomizing_worker_main,
+                       (network_loader_class, network_loadr_args, network_loader_kwargs, queue))
+    original_network_name ="h_sapiens"
     for i in range(number_of_randomizations):
         queue.put({"edge_switch_factor": edge_switch_factor,
-                   "output_path": os_path.join(output_dir, original_network_name + f"_{110 + i}")})
+                   "output_path": os_path.join(output_dir, original_network_name + f"_{i}")})
 
-    for i in range(10):
+    for i in range(num_workers):
         queue.put("HALT")
 
     queue.close()
@@ -79,6 +80,6 @@ def randomize_network(number_of_randomizations, edge_switch_factor, original_net
 
 
 if __name__ == "__main__":
-    randomize_network(400, 10,
-                      r"C:\studies\code\NetProp\data\H_sapiens\H_spaiens_nov_2021.net", network_loaders.CombinedHumanCovidNetworkLoader,
-                      r"C:\studies\code\NetProp\data\randomized_h_sapiens_with_covid")
+    randomize_network(500, 10, network_loaders.CombinedHumanCovidNetworkLoader,
+                      [r"D:\H_sapiens\H_sapiens_aug_2020.net", r"C:\studies\thesis\code\NetProp\data\HEK293T_SARS-CoV-2 (1).cx", r"D:\symbol_to_entrezgene_2021.json"], dict(),
+                      r"D:\randomized_h_sapiens")
