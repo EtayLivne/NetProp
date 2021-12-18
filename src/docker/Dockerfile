@@ -2,11 +2,13 @@
 
 FROM python:3.9.9-slim
 
-ARG conf_file="hostfs/conf.json"
+ARG workdir=/NetProp
 
-WORKDIR /NetProp
+WORKDIR ${workdir}
 COPY . .
 
 RUN pip3 install -r requirements.txt
 
-CMD py main.py ${conf_file}
+ENV PYTHONPATH = "${PYTHONPATH}:${workdir}"
+
+CMD ./runscript.sh

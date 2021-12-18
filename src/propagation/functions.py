@@ -68,13 +68,19 @@ def propagate(network, config: ConfigModel, output_dir):
         network.nodes[prior.id][PropagationNetwork.CONTAINER_KEY].source_of = set()
 
 
-def propagation_worker(network_conf, loader_classes, queue):
-    network = network_from_config(network_conf, loader_classes)
-
+def propagation_worker(loader_classes, queue):
+    network = None
+    network_id = None
     while True:
-        propagation_config = queue.get(block=True)
+        task = queue.get(block=True)
         if propagation_config == "HALT":
             break
+
+        propagation_config, network_conf = task
+        if network_conf.id != network_id:
+            network = network_from_config(network_conf, loader_classes)
+            network_id = network_conf.id
+
         print(f"Now propagating {propagation_config.output_dir_path} - {propagation_config.id}")
         propagate(network, propagation_config, propagation_config.output_dir_path)
 
@@ -105,14 +111,15 @@ def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count
     suppressed_nodes_sets = listify(config.suppressed_set)
     prior_sets = listify(config.prior_set)
     network_replicates = len(suppressed_nodes_sets) * len(prior_sets)
-    pool_size = min(network_replicates, max_processes)
+    pool_size = max_processes
     network_counter = 0
+    queue_size = 0
+    queue = Queue()
     for network_conf in single_network_config_iter(config.networks, loader_classes):
         if not network_conf.id:
             network_conf.id = f"network_{network_counter}"
             network_counter += 1
 
-        queue = Queue()
         prior_set_counter = 0
         suppressed_nodes_counter = 0
         for prior_set in prior_sets:
@@ -121,7 +128,7 @@ def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count
                 prior_set_counter += 1
 
             for suppressed_nodes in suppressed_nodes_sets:
-                if not suppressed_nodes.id:
+                if suppressed_nodes and not suppressed_nodes.id:
                     suppressed_nodes.id = f"knockout_set_{suppressed_nodes_counter}"
                     suppressed_nodes_counter += 1
 
@@ -134,17 +141,30 @@ def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count
                 specific_config.output_dir_path = str(output_path.parent)
                 specific_config.id = str(output_path.name)
 
-                queue.put(specific_config)
+                queue.put((specific_config, network_conf))
+                queue_size += 1
 
+        if queue_size > 1000:
+            for i in range(pool_size):
+                queue.put("HALT")
+
+            worker_pool = Pool(pool_size, propagation_worker, (loader_classes, queue))
+            queue.close()
+            queue.join_thread()
+            worker_pool.close()
+            worker_pool.join()
+            queue_size = 0
+            queue = Queue()
+
+    if queue_size:
         for i in range(pool_size):
             queue.put("HALT")
 
-        worker_pool = Pool(pool_size, propagation_worker, (network_conf, loader_classes, queue))
+        worker_pool = Pool(pool_size, propagation_worker, (loader_classes, queue))
         queue.close()
         queue.join_thread()
         worker_pool.close()
         worker_pool.join()
-
 
 # This wrapper function is here to make it easy to integrate configuration duplicates in the future.
 def propagate_from_config(config_path, ordering=None):
@@ -154,8 +174,8 @@ def propagate_from_config(config_path, ordering=None):
     with open(config_path, 'r') as handler:
         x = json.load(handler)
     config = ConfigModel.parse_obj(x)
-    config.suppressed_set = [SuppressedSetModel.parse_obj(y) for y in x["suppressed_set"]]
-    if config.suppressed_set is None:
+    config.suppressed_set = [SuppressedSetModel.parse_obj(y) for y in x.get("suppressed_set", [])]
+    if config.suppressed_set is None or len(config.suppressed_set) == 0:
         config.suppressed_set = SuppressedSetModel(id="no_knockouts")
 
     # attach path to volume root
