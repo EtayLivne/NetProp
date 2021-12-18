@@ -1,0 +1,20 @@
+[
+  {
+    "id": "combined_human_merged_covid",
+    "loader_class": "CombinedHumanCovidNetworkLoader",
+    "init_args": [
+      "C:\\studies\\thesis\\code\\NetProp\\data\\H_sapiens\\H_spaiens_nov_2021.net",
+	  "C:\\studies\\thesis\\code\\NetProp\\data\\ndex_covid_human_ppi.cx",
+	  "C:\\studies\\thesis\\code\\NetProp\\data\\symbol_to_entrezgene_2021.json"
+    ],
+	"init_kwargs": {
+		"covid_to_human_edge_weights": 0.9
+	},
+    "metadata": {
+      "directed": false,
+      "id_type": "entrezgene",
+	  "human_network_source": "C:\\studies\\thesis\\code\\NetProp\\data\\H_sapiens\\H_spaiens_nov_2021.net",
+	  "covid_network_source": "https://www.ndexbio.org/#/network/43803262-6d69-11ea-bfdc-0ac135e8bacf"
+    }
+  }
+]

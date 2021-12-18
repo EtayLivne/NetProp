@@ -1,0 +1,2016 @@
+{
+    "networks": {
+        "path": "C:\\studies\\thesis\\code\\temp\\configurations\\new\\network_configs\\randomized_combined_network_config.json"
+    },
+    "prior_set": {
+        "id": "merged_covid",
+        "nodes": [
+            {
+                "id": "covid",
+                "source_of": [
+                    "info"
+                ]
+            }
+        ],
+        "confidence": 0.7
+    },
+    "suppressed_set": [
+        {
+            "id": "51125_knockout",
+            "nodes": [
+                "51125"
+            ]
+        },
+        {
+            "id": "27430_knockout",
+            "nodes": [
+                "27430"
+            ]
+        },
+        {
+            "id": "523_knockout",
+            "nodes": [
+                "523"
+            ]
+        },
+        {
+            "id": "2677_knockout",
+            "nodes": [
+                "2677"
+            ]
+        },
+        {
+            "id": "51248_knockout",
+            "nodes": [
+                "51248"
+            ]
+        },
+        {
+            "id": "51295_knockout",
+            "nodes": [
+                "51295"
+            ]
+        },
+        {
+            "id": "10569_knockout",
+            "nodes": [
+                "10569"
+            ]
+        },
+        {
+            "id": "126789_knockout",
+            "nodes": [
+                "126789"
+            ]
+        },
+        {
+            "id": "23765_knockout",
+            "nodes": [
+                "23765"
+            ]
+        },
+        {
+            "id": "5878_knockout",
+            "nodes": [
+                "5878"
+            ]
+        },
+        {
+            "id": "3615_knockout",
+            "nodes": [
+                "3615"
+            ]
+        },
+        {
+            "id": "55285_knockout",
+            "nodes": [
+                "55285"
+            ]
+        },
+        {
+            "id": "50999_knockout",
+            "nodes": [
+                "50999"
+            ]
+        },
+        {
+            "id": "1291_knockout",
+            "nodes": [
+                "1291"
+            ]
+        },
+        {
+            "id": "25873_knockout",
+            "nodes": [
+                "25873"
+            ]
+        },
+        {
+            "id": "9648_knockout",
+            "nodes": [
+                "9648"
+            ]
+        },
+        {
+            "id": "79053_knockout",
+            "nodes": [
+                "79053"
+            ]
+        },
+        {
+            "id": "94005_knockout",
+            "nodes": [
+                "94005"
+            ]
+        },
+        {
+            "id": "79443_knockout",
+            "nodes": [
+                "79443"
+            ]
+        },
+        {
+            "id": "10577_knockout",
+            "nodes": [
+                "10577"
+            ]
+        },
+        {
+            "id": "60493_knockout",
+            "nodes": [
+                "60493"
+            ]
+        },
+        {
+            "id": "64784_knockout",
+            "nodes": [
+                "64784"
+            ]
+        },
+        {
+            "id": "113174_knockout",
+            "nodes": [
+                "113174"
+            ]
+        },
+        {
+            "id": "55735_knockout",
+            "nodes": [
+                "55735"
+            ]
+        },
+        {
+            "id": "25980_knockout",
+            "nodes": [
+                "25980"
+            ]
+        },
+        {
+            "id": "9188_knockout",
+            "nodes": [
+                "9188"
+            ]
+        },
+        {
+            "id": "9857_knockout",
+            "nodes": [
+                "9857"
+            ]
+        },
+        {
+            "id": "5352_knockout",
+            "nodes": [
+                "5352"
+            ]
+        },
+        {
+            "id": "23077_knockout",
+            "nodes": [
+                "23077"
+            ]
+        },
+        {
+            "id": "10295_knockout",
+            "nodes": [
+                "10295"
+            ]
+        },
+        {
+            "id": "7458_knockout",
+            "nodes": [
+                "7458"
+            ]
+        },
+        {
+            "id": "10525_knockout",
+            "nodes": [
+                "10525"
+            ]
+        },
+        {
+            "id": "25940_knockout",
+            "nodes": [
+                "25940"
+            ]
+        },
+        {
+            "id": "286827_knockout",
+            "nodes": [
+                "286827"
+            ]
+        },
+        {
+            "id": "9978_knockout",
+            "nodes": [
+                "9978"
+            ]
+        },
+        {
+            "id": "10238_knockout",
+            "nodes": [
+                "10238"
+            ]
+        },
+        {
+            "id": "24149_knockout",
+            "nodes": [
+                "24149"
+            ]
+        },
+        {
+            "id": "4015_knockout",
+            "nodes": [
+                "4015"
+            ]
+        },
+        {
+            "id": "10146_knockout",
+            "nodes": [
+                "10146"
+            ]
+        },
+        {
+            "id": "440138_knockout",
+            "nodes": [
+                "440138"
+            ]
+        },
+        {
+            "id": "51199_knockout",
+            "nodes": [
+                "51199"
+            ]
+        },
+        {
+            "id": "54602_knockout",
+            "nodes": [
+                "54602"
+            ]
+        },
+        {
+            "id": "27069_knockout",
+            "nodes": [
+                "27069"
+            ]
+        },
+        {
+            "id": "8836_knockout",
+            "nodes": [
+                "8836"
+            ]
+        },
+        {
+            "id": "54477_knockout",
+            "nodes": [
+                "54477"
+            ]
+        },
+        {
+            "id": "4363_knockout",
+            "nodes": [
+                "4363"
+            ]
+        },
+        {
+            "id": "5861_knockout",
+            "nodes": [
+                "5861"
+            ]
+        },
+        {
+            "id": "79745_knockout",
+            "nodes": [
+                "79745"
+            ]
+        },
+        {
+            "id": "79671_knockout",
+            "nodes": [
+                "79671"
+            ]
+        },
+        {
+            "id": "23225_knockout",
+            "nodes": [
+                "23225"
+            ]
+        },
+        {
+            "id": "56915_knockout",
+            "nodes": [
+                "56915"
+            ]
+        },
+        {
+            "id": "9518_knockout",
+            "nodes": [
+                "9518"
+            ]
+        },
+        {
+            "id": "51097_knockout",
+            "nodes": [
+                "51097"
+            ]
+        },
+        {
+            "id": "79666_knockout",
+            "nodes": [
+                "79666"
+            ]
+        },
+        {
+            "id": "10280_knockout",
+            "nodes": [
+                "10280"
+            ]
+        },
+        {
+            "id": "92840_knockout",
+            "nodes": [
+                "92840"
+            ]
+        },
+        {
+            "id": "2671_knockout",
+            "nodes": [
+                "2671"
+            ]
+        },
+        {
+            "id": "23787_knockout",
+            "nodes": [
+                "23787"
+            ]
+        },
+        {
+            "id": "10426_knockout",
+            "nodes": [
+                "10426"
+            ]
+        },
+        {
+            "id": "9659_knockout",
+            "nodes": [
+                "9659"
+            ]
+        },
+        {
+            "id": "26092_knockout",
+            "nodes": [
+                "26092"
+            ]
+        },
+        {
+            "id": "51116_knockout",
+            "nodes": [
+                "51116"
+            ]
+        },
+        {
+            "id": "79572_knockout",
+            "nodes": [
+                "79572"
+            ]
+        },
+        {
+            "id": "284106_knockout",
+            "nodes": [
+                "284106"
+            ]
+        },
+        {
+            "id": "79877_knockout",
+            "nodes": [
+                "79877"
+            ]
+        },
+        {
+            "id": "8546_knockout",
+            "nodes": [
+                "8546"
+            ]
+        },
+        {
+            "id": "57106_knockout",
+            "nodes": [
+                "57106"
+            ]
+        },
+        {
+            "id": "1460_knockout",
+            "nodes": [
+                "1460"
+            ]
+        },
+        {
+            "id": "55676_knockout",
+            "nodes": [
+                "55676"
+            ]
+        },
+        {
+            "id": "22937_knockout",
+            "nodes": [
+                "22937"
+            ]
+        },
+        {
+            "id": "3688_knockout",
+            "nodes": [
+                "3688"
+            ]
+        },
+        {
+            "id": "6923_knockout",
+            "nodes": [
+                "6923"
+            ]
+        },
+        {
+            "id": "3162_knockout",
+            "nodes": [
+                "3162"
+            ]
+        },
+        {
+            "id": "23404_knockout",
+            "nodes": [
+                "23404"
+            ]
+        },
+        {
+            "id": "4715_knockout",
+            "nodes": [
+                "4715"
+            ]
+        },
+        {
+            "id": "54850_knockout",
+            "nodes": [
+                "54850"
+            ]
+        },
+        {
+            "id": "51611_knockout",
+            "nodes": [
+                "51611"
+            ]
+        },
+        {
+            "id": "64093_knockout",
+            "nodes": [
+                "64093"
+            ]
+        },
+        {
+            "id": "11340_knockout",
+            "nodes": [
+                "11340"
+            ]
+        },
+        {
+            "id": "1063_knockout",
+            "nodes": [
+                "1063"
+            ]
+        },
+        {
+            "id": "10283_knockout",
+            "nodes": [
+                "10283"
+            ]
+        },
+        {
+            "id": "8761_knockout",
+            "nodes": [
+                "8761"
+            ]
+        },
+        {
+            "id": "9818_knockout",
+            "nodes": [
+                "9818"
+            ]
+        },
+        {
+            "id": "64374_knockout",
+            "nodes": [
+                "64374"
+            ]
+        },
+        {
+            "id": "28976_knockout",
+            "nodes": [
+                "28976"
+            ]
+        },
+        {
+            "id": "27346_knockout",
+            "nodes": [
+                "27346"
+            ]
+        },
+        {
+            "id": "537_knockout",
+            "nodes": [
+                "537"
+            ]
+        },
+        {
+            "id": "7088_knockout",
+            "nodes": [
+                "7088"
+            ]
+        },
+        {
+            "id": "51661_knockout",
+            "nodes": [
+                "51661"
+            ]
+        },
+        {
+            "id": "23649_knockout",
+            "nodes": [
+                "23649"
+            ]
+        },
+        {
+            "id": "2181_knockout",
+            "nodes": [
+                "2181"
+            ]
+        },
+        {
+            "id": "23646_knockout",
+            "nodes": [
+                "23646"
+            ]
+        },
+        {
+            "id": "10531_knockout",
+            "nodes": [
+                "10531"
+            ]
+        },
+        {
+            "id": "159195_knockout",
+            "nodes": [
+                "159195"
+            ]
+        },
+        {
+            "id": "9908_knockout",
+            "nodes": [
+                "9908"
+            ]
+        },
+        {
+            "id": "161_knockout",
+            "nodes": [
+                "161"
+            ]
+        },
+        {
+            "id": "26521_knockout",
+            "nodes": [
+                "26521"
+            ]
+        },
+        {
+            "id": "4140_knockout",
+            "nodes": [
+                "4140"
+            ]
+        },
+        {
+            "id": "9136_knockout",
+            "nodes": [
+                "9136"
+            ]
+        },
+        {
+            "id": "10463_knockout",
+            "nodes": [
+                "10463"
+            ]
+        },
+        {
+            "id": "152789_knockout",
+            "nodes": [
+                "152789"
+            ]
+        },
+        {
+            "id": "23203_knockout",
+            "nodes": [
+                "23203"
+            ]
+        },
+        {
+            "id": "23333_knockout",
+            "nodes": [
+                "23333"
+            ]
+        },
+        {
+            "id": "8754_knockout",
+            "nodes": [
+                "8754"
+            ]
+        },
+        {
+            "id": "6388_knockout",
+            "nodes": [
+                "6388"
+            ]
+        },
+        {
+            "id": "91942_knockout",
+            "nodes": [
+                "91942"
+            ]
+        },
+        {
+            "id": "90161_knockout",
+            "nodes": [
+                "90161"
+            ]
+        },
+        {
+            "id": "6902_knockout",
+            "nodes": [
+                "6902"
+            ]
+        },
+        {
+            "id": "382_knockout",
+            "nodes": [
+                "382"
+            ]
+        },
+        {
+            "id": "10199_knockout",
+            "nodes": [
+                "10199"
+            ]
+        },
+        {
+            "id": "80267_knockout",
+            "nodes": [
+                "80267"
+            ]
+        },
+        {
+            "id": "26993_knockout",
+            "nodes": [
+                "26993"
+            ]
+        },
+        {
+            "id": "6729_knockout",
+            "nodes": [
+                "6729"
+            ]
+        },
+        {
+            "id": "6731_knockout",
+            "nodes": [
+                "6731"
+            ]
+        },
+        {
+            "id": "79078_knockout",
+            "nodes": [
+                "79078"
+            ]
+        },
+        {
+            "id": "23307_knockout",
+            "nodes": [
+                "23307"
+            ]
+        },
+        {
+            "id": "79731_knockout",
+            "nodes": [
+                "79731"
+            ]
+        },
+        {
+            "id": "9529_knockout",
+            "nodes": [
+                "9529"
+            ]
+        },
+        {
+            "id": "23195_knockout",
+            "nodes": [
+                "23195"
+            ]
+        },
+        {
+            "id": "9510_knockout",
+            "nodes": [
+                "9510"
+            ]
+        },
+        {
+            "id": "7993_knockout",
+            "nodes": [
+                "7993"
+            ]
+        },
+        {
+            "id": "51552_knockout",
+            "nodes": [
+                "51552"
+            ]
+        },
+        {
+            "id": "55621_knockout",
+            "nodes": [
+                "55621"
+            ]
+        },
+        {
+            "id": "5577_knockout",
+            "nodes": [
+                "5577"
+            ]
+        },
+        {
+            "id": "91754_knockout",
+            "nodes": [
+                "91754"
+            ]
+        },
+        {
+            "id": "8614_knockout",
+            "nodes": [
+                "8614"
+            ]
+        },
+        {
+            "id": "51091_knockout",
+            "nodes": [
+                "51091"
+            ]
+        },
+        {
+            "id": "84720_knockout",
+            "nodes": [
+                "84720"
+            ]
+        },
+        {
+            "id": "30968_knockout",
+            "nodes": [
+                "30968"
+            ]
+        },
+        {
+            "id": "26058_knockout",
+            "nodes": [
+                "26058"
+            ]
+        },
+        {
+            "id": "387_knockout",
+            "nodes": [
+                "387"
+            ]
+        },
+        {
+            "id": "143888_knockout",
+            "nodes": [
+                "143888"
+            ]
+        },
+        {
+            "id": "5898_knockout",
+            "nodes": [
+                "5898"
+            ]
+        },
+        {
+            "id": "4343_knockout",
+            "nodes": [
+                "4343"
+            ]
+        },
+        {
+            "id": "64969_knockout",
+            "nodes": [
+                "64969"
+            ]
+        },
+        {
+            "id": "22931_knockout",
+            "nodes": [
+                "22931"
+            ]
+        },
+        {
+            "id": "11101_knockout",
+            "nodes": [
+                "11101"
+            ]
+        },
+        {
+            "id": "23071_knockout",
+            "nodes": [
+                "23071"
+            ]
+        },
+        {
+            "id": "51103_knockout",
+            "nodes": [
+                "51103"
+            ]
+        },
+        {
+            "id": "166_knockout",
+            "nodes": [
+                "166"
+            ]
+        },
+        {
+            "id": "219743_knockout",
+            "nodes": [
+                "219743"
+            ]
+        },
+        {
+            "id": "2011_knockout",
+            "nodes": [
+                "2011"
+            ]
+        },
+        {
+            "id": "58155_knockout",
+            "nodes": [
+                "58155"
+            ]
+        },
+        {
+            "id": "169714_knockout",
+            "nodes": [
+                "169714"
+            ]
+        },
+        {
+            "id": "6938_knockout",
+            "nodes": [
+                "6938"
+            ]
+        },
+        {
+            "id": "5817_knockout",
+            "nodes": [
+                "5817"
+            ]
+        },
+        {
+            "id": "5566_knockout",
+            "nodes": [
+                "5566"
+            ]
+        },
+        {
+            "id": "23509_knockout",
+            "nodes": [
+                "23509"
+            ]
+        },
+        {
+            "id": "3416_knockout",
+            "nodes": [
+                "3416"
+            ]
+        },
+        {
+            "id": "23636_knockout",
+            "nodes": [
+                "23636"
+            ]
+        },
+        {
+            "id": "11190_knockout",
+            "nodes": [
+                "11190"
+            ]
+        },
+        {
+            "id": "79699_knockout",
+            "nodes": [
+                "79699"
+            ]
+        },
+        {
+            "id": "7879_knockout",
+            "nodes": [
+                "7879"
+            ]
+        },
+        {
+            "id": "5046_knockout",
+            "nodes": [
+                "5046"
+            ]
+        },
+        {
+            "id": "53938_knockout",
+            "nodes": [
+                "53938"
+            ]
+        },
+        {
+            "id": "5116_knockout",
+            "nodes": [
+                "5116"
+            ]
+        },
+        {
+            "id": "79077_knockout",
+            "nodes": [
+                "79077"
+            ]
+        },
+        {
+            "id": "7841_knockout",
+            "nodes": [
+                "7841"
+            ]
+        },
+        {
+            "id": "5538_knockout",
+            "nodes": [
+                "5538"
+            ]
+        },
+        {
+            "id": "9512_knockout",
+            "nodes": [
+                "9512"
+            ]
+        },
+        {
+            "id": "56605_knockout",
+            "nodes": [
+                "56605"
+            ]
+        },
+        {
+            "id": "25983_knockout",
+            "nodes": [
+                "25983"
+            ]
+        },
+        {
+            "id": "55116_knockout",
+            "nodes": [
+                "55116"
+            ]
+        },
+        {
+            "id": "79080_knockout",
+            "nodes": [
+                "79080"
+            ]
+        },
+        {
+            "id": "23185_knockout",
+            "nodes": [
+                "23185"
+            ]
+        },
+        {
+            "id": "84726_knockout",
+            "nodes": [
+                "84726"
+            ]
+        },
+        {
+            "id": "10632_knockout",
+            "nodes": [
+                "10632"
+            ]
+        },
+        {
+            "id": "9470_knockout",
+            "nodes": [
+                "9470"
+            ]
+        },
+        {
+            "id": "9368_knockout",
+            "nodes": [
+                "9368"
+            ]
+        },
+        {
+            "id": "10193_knockout",
+            "nodes": [
+                "10193"
+            ]
+        },
+        {
+            "id": "4758_knockout",
+            "nodes": [
+                "4758"
+            ]
+        },
+        {
+            "id": "23155_knockout",
+            "nodes": [
+                "23155"
+            ]
+        },
+        {
+            "id": "11113_knockout",
+            "nodes": [
+                "11113"
+            ]
+        },
+        {
+            "id": "23408_knockout",
+            "nodes": [
+                "23408"
+            ]
+        },
+        {
+            "id": "51574_knockout",
+            "nodes": [
+                "51574"
+            ]
+        },
+        {
+            "id": "80213_knockout",
+            "nodes": [
+                "80213"
+            ]
+        },
+        {
+            "id": "2802_knockout",
+            "nodes": [
+                "2802"
+            ]
+        },
+        {
+            "id": "55823_knockout",
+            "nodes": [
+                "55823"
+            ]
+        },
+        {
+            "id": "2787_knockout",
+            "nodes": [
+                "2787"
+            ]
+        },
+        {
+            "id": "148867_knockout",
+            "nodes": [
+                "148867"
+            ]
+        },
+        {
+            "id": "10142_knockout",
+            "nodes": [
+                "10142"
+            ]
+        },
+        {
+            "id": "56850_knockout",
+            "nodes": [
+                "56850"
+            ]
+        },
+        {
+            "id": "7905_knockout",
+            "nodes": [
+                "7905"
+            ]
+        },
+        {
+            "id": "64689_knockout",
+            "nodes": [
+                "64689"
+            ]
+        },
+        {
+            "id": "54480_knockout",
+            "nodes": [
+                "54480"
+            ]
+        },
+        {
+            "id": "53371_knockout",
+            "nodes": [
+                "53371"
+            ]
+        },
+        {
+            "id": "4884_knockout",
+            "nodes": [
+                "4884"
+            ]
+        },
+        {
+            "id": "92105_knockout",
+            "nodes": [
+                "92105"
+            ]
+        },
+        {
+            "id": "60681_knockout",
+            "nodes": [
+                "60681"
+            ]
+        },
+        {
+            "id": "5910_knockout",
+            "nodes": [
+                "5910"
+            ]
+        },
+        {
+            "id": "8737_knockout",
+            "nodes": [
+                "8737"
+            ]
+        },
+        {
+            "id": "151188_knockout",
+            "nodes": [
+                "151188"
+            ]
+        },
+        {
+            "id": "3281_knockout",
+            "nodes": [
+                "3281"
+            ]
+        },
+        {
+            "id": "6046_knockout",
+            "nodes": [
+                "6046"
+            ]
+        },
+        {
+            "id": "9755_knockout",
+            "nodes": [
+                "9755"
+            ]
+        },
+        {
+            "id": "56257_knockout",
+            "nodes": [
+                "56257"
+            ]
+        },
+        {
+            "id": "10960_knockout",
+            "nodes": [
+                "10960"
+            ]
+        },
+        {
+            "id": "2963_knockout",
+            "nodes": [
+                "2963"
+            ]
+        },
+        {
+            "id": "5962_knockout",
+            "nodes": [
+                "5962"
+            ]
+        },
+        {
+            "id": "7090_knockout",
+            "nodes": [
+                "7090"
+            ]
+        },
+        {
+            "id": "25921_knockout",
+            "nodes": [
+                "25921"
+            ]
+        },
+        {
+            "id": "196527_knockout",
+            "nodes": [
+                "196527"
+            ]
+        },
+        {
+            "id": "79956_knockout",
+            "nodes": [
+                "79956"
+            ]
+        },
+        {
+            "id": "22981_knockout",
+            "nodes": [
+                "22981"
+            ]
+        },
+        {
+            "id": "8733_knockout",
+            "nodes": [
+                "8733"
+            ]
+        },
+        {
+            "id": "124245_knockout",
+            "nodes": [
+                "124245"
+            ]
+        },
+        {
+            "id": "6921_knockout",
+            "nodes": [
+                "6921"
+            ]
+        },
+        {
+            "id": "145282_knockout",
+            "nodes": [
+                "145282"
+            ]
+        },
+        {
+            "id": "55829_knockout",
+            "nodes": [
+                "55829"
+            ]
+        },
+        {
+            "id": "8975_knockout",
+            "nodes": [
+                "8975"
+            ]
+        },
+        {
+            "id": "55757_knockout",
+            "nodes": [
+                "55757"
+            ]
+        },
+        {
+            "id": "51439_knockout",
+            "nodes": [
+                "51439"
+            ]
+        },
+        {
+            "id": "9662_knockout",
+            "nodes": [
+                "9662"
+            ]
+        },
+        {
+            "id": "8540_knockout",
+            "nodes": [
+                "8540"
+            ]
+        },
+        {
+            "id": "1312_knockout",
+            "nodes": [
+                "1312"
+            ]
+        },
+        {
+            "id": "55700_knockout",
+            "nodes": [
+                "55700"
+            ]
+        },
+        {
+            "id": "10204_knockout",
+            "nodes": [
+                "10204"
+            ]
+        },
+        {
+            "id": "55755_knockout",
+            "nodes": [
+                "55755"
+            ]
+        },
+        {
+            "id": "26986_knockout",
+            "nodes": [
+                "26986"
+            ]
+        },
+        {
+            "id": "23476_knockout",
+            "nodes": [
+                "23476"
+            ]
+        },
+        {
+            "id": "55206_knockout",
+            "nodes": [
+                "55206"
+            ]
+        },
+        {
+            "id": "1727_knockout",
+            "nodes": [
+                "1727"
+            ]
+        },
+        {
+            "id": "157247_knockout",
+            "nodes": [
+                "157247"
+            ]
+        },
+        {
+            "id": "29110_knockout",
+            "nodes": [
+                "29110"
+            ]
+        },
+        {
+            "id": "7468_knockout",
+            "nodes": [
+                "7468"
+            ]
+        },
+        {
+            "id": "55027_knockout",
+            "nodes": [
+                "55027"
+            ]
+        },
+        {
+            "id": "10516_knockout",
+            "nodes": [
+                "10516"
+            ]
+        },
+        {
+            "id": "2201_knockout",
+            "nodes": [
+                "2201"
+            ]
+        },
+        {
+            "id": "79753_knockout",
+            "nodes": [
+                "79753"
+            ]
+        },
+        {
+            "id": "55711_knockout",
+            "nodes": [
+                "55711"
+            ]
+        },
+        {
+            "id": "79070_knockout",
+            "nodes": [
+                "79070"
+            ]
+        },
+        {
+            "id": "26520_knockout",
+            "nodes": [
+                "26520"
+            ]
+        },
+        {
+            "id": "9653_knockout",
+            "nodes": [
+                "9653"
+            ]
+        },
+        {
+            "id": "10956_knockout",
+            "nodes": [
+                "10956"
+            ]
+        },
+        {
+            "id": "2108_knockout",
+            "nodes": [
+                "2108"
+            ]
+        },
+        {
+            "id": "9868_knockout",
+            "nodes": [
+                "9868"
+            ]
+        },
+        {
+            "id": "2782_knockout",
+            "nodes": [
+                "2782"
+            ]
+        },
+        {
+            "id": "23339_knockout",
+            "nodes": [
+                "23339"
+            ]
+        },
+        {
+            "id": "8480_knockout",
+            "nodes": [
+                "8480"
+            ]
+        },
+        {
+            "id": "4927_knockout",
+            "nodes": [
+                "4927"
+            ]
+        },
+        {
+            "id": "10890_knockout",
+            "nodes": [
+                "10890"
+            ]
+        },
+        {
+            "id": "7812_knockout",
+            "nodes": [
+                "7812"
+            ]
+        },
+        {
+            "id": "4928_knockout",
+            "nodes": [
+                "4928"
+            ]
+        },
+        {
+            "id": "1459_knockout",
+            "nodes": [
+                "1459"
+            ]
+        },
+        {
+            "id": "80777_knockout",
+            "nodes": [
+                "80777"
+            ]
+        },
+        {
+            "id": "51361_knockout",
+            "nodes": [
+                "51361"
+            ]
+        },
+        {
+            "id": "202018_knockout",
+            "nodes": [
+                "202018"
+            ]
+        },
+        {
+            "id": "55768_knockout",
+            "nodes": [
+                "55768"
+            ]
+        },
+        {
+            "id": "26519_knockout",
+            "nodes": [
+                "26519"
+            ]
+        },
+        {
+            "id": "4139_knockout",
+            "nodes": [
+                "4139"
+            ]
+        },
+        {
+            "id": "29066_knockout",
+            "nodes": [
+                "29066"
+            ]
+        },
+        {
+            "id": "80273_knockout",
+            "nodes": [
+                "80273"
+            ]
+        },
+        {
+            "id": "2804_knockout",
+            "nodes": [
+                "2804"
+            ]
+        },
+        {
+            "id": "481_knockout",
+            "nodes": [
+                "481"
+            ]
+        },
+        {
+            "id": "5327_knockout",
+            "nodes": [
+                "5327"
+            ]
+        },
+        {
+            "id": "79934_knockout",
+            "nodes": [
+                "79934"
+            ]
+        },
+        {
+            "id": "5576_knockout",
+            "nodes": [
+                "5576"
+            ]
+        },
+        {
+            "id": "23065_knockout",
+            "nodes": [
+                "23065"
+            ]
+        },
+        {
+            "id": "1861_knockout",
+            "nodes": [
+                "1861"
+            ]
+        },
+        {
+            "id": "27243_knockout",
+            "nodes": [
+                "27243"
+            ]
+        },
+        {
+            "id": "201134_knockout",
+            "nodes": [
+                "201134"
+            ]
+        },
+        {
+            "id": "28969_knockout",
+            "nodes": [
+                "28969"
+            ]
+        },
+        {
+            "id": "5862_knockout",
+            "nodes": [
+                "5862"
+            ]
+        },
+        {
+            "id": "79586_knockout",
+            "nodes": [
+                "79586"
+            ]
+        },
+        {
+            "id": "23111_knockout",
+            "nodes": [
+                "23111"
+            ]
+        },
+        {
+            "id": "2150_knockout",
+            "nodes": [
+                "2150"
+            ]
+        },
+        {
+            "id": "57534_knockout",
+            "nodes": [
+                "57534"
+            ]
+        },
+        {
+            "id": "2040_knockout",
+            "nodes": [
+                "2040"
+            ]
+        },
+        {
+            "id": "25831_knockout",
+            "nodes": [
+                "25831"
+            ]
+        },
+        {
+            "id": "2200_knockout",
+            "nodes": [
+                "2200"
+            ]
+        },
+        {
+            "id": "5422_knockout",
+            "nodes": [
+                "5422"
+            ]
+        },
+        {
+            "id": "51010_knockout",
+            "nodes": [
+                "51010"
+            ]
+        },
+        {
+            "id": "2801_knockout",
+            "nodes": [
+                "2801"
+            ]
+        },
+        {
+            "id": "3066_knockout",
+            "nodes": [
+                "3066"
+            ]
+        },
+        {
+            "id": "11001_knockout",
+            "nodes": [
+                "11001"
+            ]
+        },
+        {
+            "id": "25777_knockout",
+            "nodes": [
+                "25777"
+            ]
+        },
+        {
+            "id": "162427_knockout",
+            "nodes": [
+                "162427"
+            ]
+        },
+        {
+            "id": "64757_knockout",
+            "nodes": [
+                "64757"
+            ]
+        },
+        {
+            "id": "80020_knockout",
+            "nodes": [
+                "80020"
+            ]
+        },
+        {
+            "id": "7466_knockout",
+            "nodes": [
+                "7466"
+            ]
+        },
+        {
+            "id": "84858_knockout",
+            "nodes": [
+                "84858"
+            ]
+        },
+        {
+            "id": "23325_knockout",
+            "nodes": [
+                "23325"
+            ]
+        },
+        {
+            "id": "55833_knockout",
+            "nodes": [
+                "55833"
+            ]
+        },
+        {
+            "id": "89874_knockout",
+            "nodes": [
+                "89874"
+            ]
+        },
+        {
+            "id": "79954_knockout",
+            "nodes": [
+                "79954"
+            ]
+        },
+        {
+            "id": "27248_knockout",
+            "nodes": [
+                "27248"
+            ]
+        },
+        {
+            "id": "8021_knockout",
+            "nodes": [
+                "8021"
+            ]
+        },
+        {
+            "id": "29880_knockout",
+            "nodes": [
+                "29880"
+            ]
+        },
+        {
+            "id": "57142_knockout",
+            "nodes": [
+                "57142"
+            ]
+        },
+        {
+            "id": "5557_knockout",
+            "nodes": [
+                "5557"
+            ]
+        },
+        {
+            "id": "10157_knockout",
+            "nodes": [
+                "10157"
+            ]
+        },
+        {
+            "id": "2876_knockout",
+            "nodes": [
+                "2876"
+            ]
+        },
+        {
+            "id": "10844_knockout",
+            "nodes": [
+                "10844"
+            ]
+        },
+        {
+            "id": "23177_knockout",
+            "nodes": [
+                "23177"
+            ]
+        },
+        {
+            "id": "5976_knockout",
+            "nodes": [
+                "5976"
+            ]
+        },
+        {
+            "id": "23107_knockout",
+            "nodes": [
+                "23107"
+            ]
+        },
+        {
+            "id": "5447_knockout",
+            "nodes": [
+                "5447"
+            ]
+        },
+        {
+            "id": "5714_knockout",
+            "nodes": [
+                "5714"
+            ]
+        },
+        {
+            "id": "34_knockout",
+            "nodes": [
+                "34"
+            ]
+        },
+        {
+            "id": "57153_knockout",
+            "nodes": [
+                "57153"
+            ]
+        },
+        {
+            "id": "1173_knockout",
+            "nodes": [
+                "1173"
+            ]
+        },
+        {
+            "id": "6728_knockout",
+            "nodes": [
+                "6728"
+            ]
+        },
+        {
+            "id": "1662_knockout",
+            "nodes": [
+                "1662"
+            ]
+        },
+        {
+            "id": "8453_knockout",
+            "nodes": [
+                "8453"
+            ]
+        },
+        {
+            "id": "10897_knockout",
+            "nodes": [
+                "10897"
+            ]
+        },
+        {
+            "id": "79178_knockout",
+            "nodes": [
+                "79178"
+            ]
+        },
+        {
+            "id": "9898_knockout",
+            "nodes": [
+                "9898"
+            ]
+        },
+        {
+            "id": "79571_knockout",
+            "nodes": [
+                "79571"
+            ]
+        },
+        {
+            "id": "26574_knockout",
+            "nodes": [
+                "26574"
+            ]
+        },
+        {
+            "id": "83729_knockout",
+            "nodes": [
+                "83729"
+            ]
+        },
+        {
+            "id": "23367_knockout",
+            "nodes": [
+                "23367"
+            ]
+        },
+        {
+            "id": "11116_knockout",
+            "nodes": [
+                "11116"
+            ]
+        },
+        {
+            "id": "131118_knockout",
+            "nodes": [
+                "131118"
+            ]
+        },
+        {
+            "id": "5558_knockout",
+            "nodes": [
+                "5558"
+            ]
+        },
+        {
+            "id": "949_knockout",
+            "nodes": [
+                "949"
+            ]
+        },
+        {
+            "id": "1786_knockout",
+            "nodes": [
+                "1786"
+            ]
+        },
+        {
+            "id": "64432_knockout",
+            "nodes": [
+                "64432"
+            ]
+        },
+        {
+            "id": "57222_knockout",
+            "nodes": [
+                "57222"
+            ]
+        },
+        {
+            "id": "4218_knockout",
+            "nodes": [
+                "4218"
+            ]
+        },
+        {
+            "id": "90580_knockout",
+            "nodes": [
+                "90580"
+            ]
+        },
+        {
+            "id": "5318_knockout",
+            "nodes": [
+                "5318"
+            ]
+        },
+        {
+            "id": "4240_knockout",
+            "nodes": [
+                "4240"
+            ]
+        },
+        {
+            "id": "2717_knockout",
+            "nodes": [
+                "2717"
+            ]
+        },
+        {
+            "id": "80142_knockout",
+            "nodes": [
+                "80142"
+            ]
+        },
+        {
+            "id": "23085_knockout",
+            "nodes": [
+                "23085"
+            ]
+        },
+        {
+            "id": "617_knockout",
+            "nodes": [
+                "617"
+            ]
+        },
+        {
+            "id": "79709_knockout",
+            "nodes": [
+                "79709"
+            ]
+        },
+        {
+            "id": "11064_knockout",
+            "nodes": [
+                "11064"
+            ]
+        },
+        {
+            "id": "26515_knockout",
+            "nodes": [
+                "26515"
+            ]
+        },
+        {
+            "id": "80222_knockout",
+            "nodes": [
+                "80222"
+            ]
+        },
+        {
+            "id": "26355_knockout",
+            "nodes": [
+                "26355"
+            ]
+        },
+        {
+            "id": "10270_knockout",
+            "nodes": [
+                "10270"
+            ]
+        }
+    ],
+    "halt_conditions": {
+        "min_gap": 1e-05
+    },
+    "id": "merged_covid_neighbors_kncokouts",
+    "output_dir_path": "D:\\propagations\\covid_neighbor_knockouts"
+}

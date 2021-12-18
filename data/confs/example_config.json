@@ -1,0 +1,20 @@
+{
+  "id": "dummy_propagation",
+  "networks": {
+    "path": "C:\\studies\\thesis\\code\\temp\\configurations\\new\\network_configs"
+  },
+  "prior_set": {
+    "id": "merged_covid",
+    "nodes": [
+      {
+      "id": "covid",
+      "source_of": ["info"]
+      }
+    ],
+    "confidence": 0.7
+  },
+  "halt_conditions": {
+    "min_gap": 0.00001
+  },
+  "output_dir_path": "C:\\studies\\thesis\\code\\temp\\propagations\\covid_neighbor_knockouts"
+}
