@@ -93,3 +93,41 @@ class CombinedHumanCovidNetworkLoader(HSapiensNetworkLoader):
     def _load_ndex(self):
         raw_network = ndex2.create_nice_cx_from_file(self.covid_human_ppi_path)
         return raw_network.to_networkx(mode="default")
+
+
+class MetaCovidHumanLoader(HSapiensNetworkLoader):
+    MERGED_COVID_NODE_NAME = "covid"
+    CONFIDENCE_SCORES ={
+        2: 0.8,
+        3: 0.85,
+        4: 0.9,
+        5: 0.95,
+        6: 1
+    }
+
+    def __init__(self, human_network_path: str, covid_to_human_path: str, merged_covid=True):
+        super().__init__(human_network_path)
+        self.covid_to_human_path = covid_to_human_path
+        self.merged_covid = merged_covid
+
+    def load(self, *args, **kwargs):
+        network = super().load()
+        with open(self.covid_to_human_path, 'r') as handler:
+            cov_to_human_ppi = json.load(handler)
+        for cov_protein, interacting_human_proteins in cov_to_human_ppi.items():
+            source = self.MERGED_COVID_NODE_NAME if self.merged_covid else cov_protein
+            if source not in network:
+                network.add_node(source, **self._new_node_attrs(SpeciesIDs.CORONAVIRUS.value))
+            for human_protein, num_paper_appearances in interacting_human_proteins.items():
+                if num_paper_appearances < 2:
+                    continue
+                target = human_protein
+                if target not in network:
+                    print(f"cannot add covid interaction with {human_protein} - it isnt in the network")
+                    continue
+                confidence = self._calc_confidence(num_paper_appearances)
+                network.add_edge(source, target, weight=confidence)
+        return network
+
+    def _calc_confidence(self, num_paper_appearances):
+        return self.CONFIDENCE_SCORES[num_paper_appearances]
