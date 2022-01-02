@@ -6,3 +6,5 @@ class SpeciesIDs(Enum):
 
 class NodeAttrs(Enum):
     SPECIES_ID = "species_id"
+
+

@@ -1,4 +1,3 @@
-from env import VOLUME_ROOT
 from pathlib import Path
 
 def listify(elem):
@@ -7,5 +6,5 @@ def listify(elem):
     return [elem]
 
 
-def attach_to_root(path: str):
-    return str(Path(VOLUME_ROOT) / Path(path))
+# def attach_to_root(path: str):
+#     return str(Path(VOLUME_ROOT) / Path(path))

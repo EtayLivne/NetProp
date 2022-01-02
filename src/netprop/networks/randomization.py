@@ -4,7 +4,7 @@ from random import choice
 import os.path as os_path
 from multiprocessing import Queue, Pool, cpu_count
 
-import networks.loaders.single as network_loaders
+from .loaders import single as network_loaders
 
 
 def generate_rank_equivalent_network(network: nx.Graph, edge_switch_factor):

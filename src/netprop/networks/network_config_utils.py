@@ -3,9 +3,9 @@ import json
 from typing import List
 from pathlib import Path
 
-from generic_utils.utils import listify
-from networks.loaders.base import MultiNetworkLoader
-from models.config_models import NetworksParametersModel, NetworkInclusionParametersModel
+from netprop.generic_utils.utils import listify
+from .loaders.base import MultiNetworkLoader
+from netprop.models.config_models import NetworksParametersModel, NetworkInclusionParametersModel
 
 
 global_network_default_id_counter = 0

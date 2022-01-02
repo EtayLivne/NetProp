@@ -1,11 +1,12 @@
+import json
 import ndex2.client
 
 
-from networks.loaders.base import BaseNetworkLoader
-from generic_utils.constants import SpeciesIDs, NodeAttrs
-from generic_utils.data_handlers.extractors import HSapiensExtractor
-from generic_utils.data_handlers.translators import GeneinfoToEntrezID
-from propagation.classes import PropagationNetwork, PropagationContainer
+from .base import BaseNetworkLoader
+from netprop.generic_utils.constants import SpeciesIDs, NodeAttrs
+from netprop.generic_utils.data_handlers.extractors import HSapiensExtractor
+from netprop.generic_utils.data_handlers.translators import GeneinfoToEntrezID
+from netprop.propagation.classes import PropagationNetwork, PropagationContainer
 
 
 class PPINetworkLoader(BaseNetworkLoader):
@@ -14,7 +15,7 @@ class PPINetworkLoader(BaseNetworkLoader):
     @classmethod
     def _new_node_attrs(cls, species):
         return {
-            PropagationNetwork.CONTAINER_KEY: PropagationContainer(),
+            PropagationNetwork.CONTAINER_KEY: PropagationContainer(source_of=set()),
             cls.SPECIES_ID_KEY: species
         }
 
@@ -123,7 +124,7 @@ class MetaCovidHumanLoader(HSapiensNetworkLoader):
                     continue
                 target = human_protein
                 if target not in network:
-                    print(f"cannot add covid interaction with {human_protein} - it isnt in the network")
+                    print(f"cannot add covid interaction with {human_protein} - it isn't in the network")
                     continue
                 confidence = self._calc_confidence(num_paper_appearances)
                 network.add_edge(source, target, weight=confidence)

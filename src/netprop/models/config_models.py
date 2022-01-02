@@ -1,7 +1,7 @@
-from pydantic import BaseModel, validator, Field
-from typing import Optional, Set, List, ClassVar, Union
-from propagation.classes import Propagater
 from enum import Enum
+from pydantic import BaseModel, validator, Field
+from typing import Optional, List, ClassVar, Union
+
 
 class ProteinIDs(str, Enum):
     ENTREZGENE = "entrezgene"
@@ -69,7 +69,7 @@ class ConfigModel(BaseModel):
     prior_set: Union[PriorSetModel, List[PriorSetModel]]
     suppressed_set: Optional[Union[SuppressedSetModel, List[SuppressedSetModel]]]
     halt_conditions: HaltConditionOptionModel
-    method: str = Propagater.ITERATIVE
+    method: str = "iterative"
     id: Optional[str] = None
     output_dir_path: Optional[str]
 

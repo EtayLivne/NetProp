@@ -1,7 +1,9 @@
-from abc import ABCMeta, abstractmethod
-from models.config_models import NetworksParametersModel
-from propagation.classes import PropagationNetwork
 from typing import List
+from abc import ABCMeta, abstractmethod
+
+from ..propagation_network import PropagationNetwork
+from netprop.models.config_models import NetworksParametersModel
+
 
 
 class BaseNetworkLoader(metaclass=ABCMeta):

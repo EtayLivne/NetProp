@@ -1,8 +1,7 @@
 import json
-from functools import partial
 from typing import Callable
 
-from models.config_models import *
+from .config_models import *
 
 
 def save_as_json(model: BaseModel, path: str):

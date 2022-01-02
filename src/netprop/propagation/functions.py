@@ -3,15 +3,14 @@ from pathlib import Path
 from datetime import datetime
 from multiprocessing import Pool, Queue, cpu_count
 
-from env import VOLUME_ROOT
-from generic_utils.utils import listify, attach_to_root
-from networks.loaders.base import BaseNetworkLoader
-import networks.loaders.single as network_loaders
-import networks.loaders.multi as multi_network_loaders
-from propagation.classes import Propagater, PropagationNetwork
-from models.config_models import ConfigModel, NetworksParametersModel, SuppressedSetModel
-from networks.network_config_utils import single_network_config_iter, network_from_config
-from models.results_models import PropagationResultModel, HaltConditionOptionModel, PropagationNodeModel
+from netprop.generic_utils.utils import listify
+from .classes import Propagater, PropagationNetwork
+from netprop.networks.loaders.base import BaseNetworkLoader
+import netprop.networks.loaders.single as network_loaders
+import netprop.networks.loaders.multi as multi_network_loaders
+from netprop.models.config_models import ConfigModel, NetworksParametersModel, SuppressedSetModel
+from netprop.networks.network_config_utils import single_network_config_iter, network_from_config
+from netprop.models.results_models import PropagationResultModel, HaltConditionOptionModel, PropagationNodeModel
 
 NETWORK_ORDERING_KEYWORD = "network"
 PRIOR_SET_ORDERING_KEYWORD = "prior_set"
@@ -73,7 +72,7 @@ def propagation_worker(loader_classes, queue):
     network_id = None
     while True:
         task = queue.get(block=True)
-        if propagation_config == "HALT":
+        if task == "HALT":
             break
 
         propagation_config, network_conf = task
@@ -110,7 +109,6 @@ def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count
 
     suppressed_nodes_sets = listify(config.suppressed_set)
     prior_sets = listify(config.prior_set)
-    network_replicates = len(suppressed_nodes_sets) * len(prior_sets)
     pool_size = max_processes
     network_counter = 0
     queue_size = 0
@@ -180,7 +178,7 @@ def propagate_from_config(config_path, ordering=None):
 
     # attach path to volume root
     if not config.output_dir_path:
-        config.output_dir_path = VOLUME_ROOT
+        config.output_dir_path = ""
     # else:
     #     config.output_dir_path = attach_to_root(config.output_dir_path)
 

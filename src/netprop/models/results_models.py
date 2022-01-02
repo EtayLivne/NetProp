@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, Set, List, Dict
-from models.config_models import HaltConditionOptionModel
+
+from .config_models import HaltConditionOptionModel
 
 
 class PropagationNetworkModel(BaseModel):

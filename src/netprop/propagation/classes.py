@@ -5,36 +5,33 @@ import numpy as np
 import scipy as sp
 import scipy.linalg
 import networkx as nx
-from pydantic import Field
+# from pydantic import Field
 from scipy.sparse.linalg import inv
 import numpy.lib.scimath as np_scimath
-from pydantic.dataclasses import dataclass
+# from pydantic.dataclasses import dataclass
+
+from netprop.networks.propagation_network import PropagationContainer, PropagationNetwork
+# @dataclass
+# class PropagationContainer:
+#     source_of: Set[str] = Field(default_factory=set)
+#     # target_of: Set[str] = Field(default_factory=set)  #TODO delete if we officially give up on target sets
 
 
-
-
-
-@dataclass
-class PropagationContainer:
-    source_of: Set[str] = Field(default_factory=set)
-    # target_of: Set[str] = Field(default_factory=set)  #TODO delete if we officially give up on target sets
-
-
-class PropagationNetwork(nx.Graph):
-    CONTAINER_KEY = "container"
-    EDGE_WEIGHT = "weight"
-
-    @classmethod
-    def node_has_propagation_container(cls, node_properties):
-        return isinstance(node_properties.get(cls.CONTAINER_KEY, None), PropagationContainer)
-
-    def is_ready_for_propagation(self):
-        nodes_condition = all(self.node_has_propagation_container(data) for node, data in self.nodes(data=True))
-        if not nodes_condition:
-            return False
-        edges_condition = all(data.get("weight", -1) > 0 for _, _, data in self.edges(data=True))
-
-        return nodes_condition and edges_condition
+# class PropagationNetwork(nx.Graph):
+#     CONTAINER_KEY = "container"
+#     EDGE_WEIGHT = "weight"
+#
+#     @classmethod
+#     def node_has_propagation_container(cls, node_properties):
+#         return isinstance(node_properties.get(cls.CONTAINER_KEY, None), PropagationContainer)
+#
+#     def is_ready_for_propagation(self):
+#         nodes_condition = all(self.node_has_propagation_container(data) for node, data in self.nodes(data=True))
+#         if not nodes_condition:
+#             return False
+#         edges_condition = all(data.get("weight", -1) > 0 for _, _, data in self.edges(data=True))
+#
+#         return nodes_condition and edges_condition
 
 
 class PropagationError(BaseException):

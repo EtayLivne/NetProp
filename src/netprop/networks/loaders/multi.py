@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from networks.loaders.base import MultiNetworkLoader
-from models.config_models import NetworksParametersModel
+from .base import MultiNetworkLoader
+from netprop.models.config_models import NetworksParametersModel
 
 
 
