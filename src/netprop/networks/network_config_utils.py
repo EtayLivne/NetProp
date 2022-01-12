@@ -4,17 +4,17 @@ from typing import List
 from pathlib import Path
 
 from netprop.generic_utils.utils import listify
-from .loaders.base import MultiNetworkLoader
+from .loaders.base import MultiNetworkLoader, loader_registry
 from netprop.models.config_models import NetworksParametersModel, NetworkInclusionParametersModel
-
 
 global_network_default_id_counter = 0
 
 
 # TODO: better mechanism than the multi parameter, which is cumbersone and invites configuration errors
-def _load(config: NetworksParametersModel, loader_classes):
-    loader_class = loader_classes.get(config.loader_class, None)
+def _load(config: NetworksParametersModel):
+    loader_class = loader_registry.get(config.loader_class, None)
     if not loader_class:
+        print(loader_registry)
         raise ValueError(f"No network loader named {config.loader_class} detected")
     if config.multi != issubclass(loader_class, MultiNetworkLoader):
         raise ValueError(f"network {config.id}  multi value {config.multi} doesn't match network loader {config.loader_class}")
@@ -33,14 +33,14 @@ def _set_metadata(network, config: NetworksParametersModel):
         network.graph[k] = v
 
 
-def network_from_config(network_config, loader_classes):
-    network = _load(network_config, loader_classes)
+def network_from_config(network_config):
+    network = _load(network_config)
     _set_metadata(network, network_config)
     return network
 
 
-def _unpack_multinetwork_config(network_config, loader_classes):
-    return _load(network_config, loader_classes)
+def _unpack_multinetwork_config(network_config):
+    return _load(network_config)
 
 
 def _get_all_config_files(sources: List[str]):
@@ -86,7 +86,7 @@ def _add_to_unqiue_id_list(conf, unique_ids: dict, lst: list):
     lst.append(conf)
 
 
-def single_network_config_iter(config: NetworkInclusionParametersModel, loader_classes):
+def single_network_config_iter(config: NetworkInclusionParametersModel):
     sources = config.path if isinstance(config.path, list) else [config.path]
     network_config_files = _get_all_config_files(sources)
 
@@ -104,7 +104,7 @@ def single_network_config_iter(config: NetworkInclusionParametersModel, loader_c
             c = NetworksParametersModel.parse_obj(network_conf)
             if not _id_passes_filter(config, c.id):
                 continue
-            new_configs = _unpack_multinetwork_config(c, loader_classes) if c.multi else [c]
+            new_configs = _unpack_multinetwork_config(c) if c.multi else [c]
 
             for new_conf in new_configs:
                 _add_to_unqiue_id_list(new_conf, unique_ids, unpacked_configs)

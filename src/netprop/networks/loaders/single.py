@@ -2,14 +2,14 @@ import json
 import ndex2.client
 
 
-from .base import BaseNetworkLoader
+from .base import SingleNetworkLoader
 from netprop.generic_utils.constants import SpeciesIDs, NodeAttrs
 from netprop.generic_utils.data_handlers.extractors import HSapiensExtractor
 from netprop.generic_utils.data_handlers.translators import GeneinfoToEntrezID
 from netprop.propagation.classes import PropagationNetwork, PropagationContainer
 
 
-class PPINetworkLoader(BaseNetworkLoader):
+class PPINetworkLoader(SingleNetworkLoader):
     SPECIES_ID_KEY = NodeAttrs.SPECIES_ID.value
 
     @classmethod
@@ -98,7 +98,7 @@ class CombinedHumanCovidNetworkLoader(HSapiensNetworkLoader):
 
 class MetaCovidHumanLoader(HSapiensNetworkLoader):
     MERGED_COVID_NODE_NAME = "covid"
-    CONFIDENCE_SCORES ={
+    CONFIDENCE_SCORES = {
         2: 0.8,
         3: 0.85,
         4: 0.9,

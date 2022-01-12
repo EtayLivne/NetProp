@@ -4,11 +4,16 @@ from abc import ABCMeta, abstractmethod
 from ..propagation_network import PropagationNetwork
 from netprop.models.config_models import NetworksParametersModel
 
-
+loader_registry = dict()
 
 class BaseNetworkLoader(metaclass=ABCMeta):
+
     def __init__(self, *args, **kwargs):
         pass
+
+
+    def __init_subclass__(cls, **kwargs):
+        loader_registry[cls.__name__] = cls
 
 
 class SingleNetworkLoader(BaseNetworkLoader, metaclass=ABCMeta):

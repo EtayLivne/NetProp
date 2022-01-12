@@ -67,7 +67,7 @@ def propagate(network, config: ConfigModel, output_dir):
         network.nodes[prior.id][PropagationNetwork.CONTAINER_KEY].source_of = set()
 
 
-def propagation_worker(loader_classes, queue):
+def propagation_worker(queue):
     network = None
     network_id = None
     while True:
@@ -77,7 +77,7 @@ def propagation_worker(loader_classes, queue):
 
         propagation_config, network_conf = task
         if network_conf.id != network_id:
-            network = network_from_config(network_conf, loader_classes)
+            network = network_from_config(network_conf)
             network_id = network_conf.id
 
         print(f"Now propagating {propagation_config.output_dir_path} - {propagation_config.id}")
@@ -103,9 +103,6 @@ def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count
         ordering = {NETWORK_ORDERING_KEYWORD: 0, PRIOR_SET_ORDERING_KEYWORD: 1, SUPPRESSED_NODES_ORDERING_KEYWORD: 2}
 
     _name, _cls = 0, 1
-    loader_classes = {item[_name]: item[_cls] for item in
-                      inspect.getmembers(network_loaders, inspect.isclass) + inspect.getmembers(multi_network_loaders, inspect.isclass)
-                      if issubclass(item[_cls], BaseNetworkLoader)}
 
     suppressed_nodes_sets = listify(config.suppressed_set)
     prior_sets = listify(config.prior_set)
@@ -113,7 +110,7 @@ def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count
     network_counter = 0
     queue_size = 0
     queue = Queue()
-    for network_conf in single_network_config_iter(config.networks, loader_classes):
+    for network_conf in single_network_config_iter(config.networks):
         if not network_conf.id:
             network_conf.id = f"network_{network_counter}"
             network_counter += 1
@@ -146,7 +143,7 @@ def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count
             for i in range(pool_size):
                 queue.put("HALT")
 
-            worker_pool = Pool(pool_size, propagation_worker, (loader_classes, queue))
+            worker_pool = Pool(pool_size, propagation_worker, (queue,))
             queue.close()
             queue.join_thread()
             worker_pool.close()
@@ -158,7 +155,7 @@ def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count
         for i in range(pool_size):
             queue.put("HALT")
 
-        worker_pool = Pool(pool_size, propagation_worker, (loader_classes, queue))
+        worker_pool = Pool(pool_size, propagation_worker, (queue,))
         queue.close()
         queue.join_thread()
         worker_pool.close()
