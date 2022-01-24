@@ -162,7 +162,7 @@ def launch_multiprocess_propagation(config: ConfigModel, max_processes=cpu_count
         worker_pool.join()
 
 # This wrapper function is here to make it easy to integrate configuration duplicates in the future.
-def propagate_from_config(config_path, ordering=None):
+def propagate_from_config(config_path, ordering=None, max_processes=cpu_count() - 2):
     import json
     #TODO appears to be an internal bug in pydantic that doesn't allow it to read suppressed nodes - restore to commented line when it is resolved
     # config = ConfigModel.parse_file(config_path)
@@ -179,4 +179,4 @@ def propagate_from_config(config_path, ordering=None):
     # else:
     #     config.output_dir_path = attach_to_root(config.output_dir_path)
 
-    launch_multiprocess_propagation(config, ordering=ordering)
+    launch_multiprocess_propagation(config, ordering=ordering, max_processes=max_processes)
