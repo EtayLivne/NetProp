@@ -65,11 +65,13 @@ class Propagater:
         self.max_steps = max_steps
         self.min_gap = min_gap
 
+
         self._reset_liquids()
         self._edges_are_normalized = False
         self._unsuppressed_network = None
         self._propagation_methods = {self.ITERATIVE: self._iterative_propagation,
                                      self.ANALYTICAL: self._analytic_propagation}
+        self._adjacency_matrix = self._normalize_edge_weights(nx.to_scipy_sparse_matrix(self.network))
 
     @property
     def network(self):
@@ -133,11 +135,13 @@ class Propagater:
             raise ValueError(f"propagation method {propagation_method} unrecognized. "
                              f"Choose one of the following: {self._PROPAGATION_METHODS}")
 
+        if propagation_method == self.ANALYTICAL and len(suppressed_set) > 0:
+            raise ValueError("analytical method with suppressed nodes is not supported in this version :(")
+
         # Prepare propagation based on parameters
-        self._suppress_nodes(suppressed_nodes=suppressed_set)
-        adjacency_matrix = nx.to_scipy_sparse_matrix(self.network)
-        # TODO remove passing of suppressed nodes - this is purely for debugging!
-        adjacency_matrix = self._normalize_edge_weights(adjacency_matrix)
+        # self._suppress_nodes(suppressed_nodes=suppressed_set) # new suppression method leaves the nodes in the graph
+        # adjacency_matrix = nx.to_scipy_sparse_matrix(self.network)    # since the matrix is now the same in all iterations, do this once at the object level
+        # adjacency_matrix = self._normalize_edge_weights(self._adjacency_matrix) # since the matrix is now the same in all iterations, do this once at the object level
         liquids = {}
         for prior in prior_set:
             for liquid in self.network.nodes[prior][self.network.CONTAINER_KEY].source_of:
@@ -150,18 +154,22 @@ class Propagater:
         # Propagate
         for liquid, priors in liquids.items():
             prior_vector = self.source_confidence * np.array([1 if n in priors else 0 for n in self.network.nodes])
-            state_vector = self._propagation_methods[propagation_method](prior_vector, adjacency_matrix)
+            suppressed_indexes = np.nonzero( np.array([1 if n in suppressed_set else 0 for n in self.network.nodes]))[0]
+            state_vector = self._propagation_methods[propagation_method](prior_vector, suppressed_indexes)
             for index, node in enumerate(self.network.nodes):
                 self.network.nodes[node][self._LIQUIDS][liquid] = state_vector[index]
 
-        self._suppress_nodes(reverse=True)
+        # self._suppress_nodes(reverse=True)
 
-    def _iterative_propagation(self, prior_vector, adjacency_matrix):
+    def _iterative_propagation(self, prior_vector, suppressed_indexes):
         state_vector = np.array([])
         step_counter = self.max_steps
         while True:
             prev_state_vector = np.copy(state_vector) if state_vector.any() else np.copy(prior_vector)
-            state_vector = adjacency_matrix.dot(prev_state_vector) + prior_vector
+            state_vector = self._adjacency_matrix.dot(prev_state_vector) + prior_vector
+            for i in suppressed_indexes:
+                state_vector[i] = 0
+
             if self.min_gap != self.NO_MIN_GAP and sp.linalg.norm(state_vector - prev_state_vector) < self.min_gap:
                 break
             if self.max_steps != self.NO_MAX_STEPS:
@@ -170,9 +178,9 @@ class Propagater:
                     break
         return state_vector
 
-    def _analytic_propagation(self, prior_vector, adjacency_matrix):
+    def _analytic_propagation(self, prior_vector, suppressed_set):
         I = sp.sparse.diags([1] * len(self.network.nodes), format="csr")
-        return sp.sparse.linalg.inv(I - adjacency_matrix).dot(prior_vector)
+        return sp.sparse.linalg.inv(I - self._adjacency_matrix).dot(prior_vector)
 
     #TODO support multiple forms of normalization (via parameter in propagation config)
     # Only works for symmetric (i.e undirected) networks!

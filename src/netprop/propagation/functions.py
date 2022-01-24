@@ -27,7 +27,7 @@ def record_propagation_result(propagater, suppressed_nodes, file_path, propagati
                                         source_of=data[PropagationNetwork.CONTAINER_KEY].source_of,
                                         liquids=propagater.node_liquids(node),
                                         metadata={k: v for k, v in data.items() if k not in non_metadata_fields})
-             for node, data in propagater.network.nodes(data=True) if node not in suppressed_nodes}
+             for node, data in propagater.network.nodes(data=True)} # used to have a "if node not in suppressed_nodes" clause
 
     propagation_result = PropagationResultModel(
         id=propagation_id,
