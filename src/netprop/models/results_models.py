@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, Set, List, Dict
-
+from pandas import Series
 from .config_models import HaltConditionOptionModel
 
 
@@ -37,3 +37,8 @@ class PropagationResultModel(BaseModel):
     prior_set_confidence: float
     halt_conditions: HaltConditionOptionModel
 
+    def prop_scroes_as_series(self, by_liquid: str="info", sort: bool=False):
+        df = Series({n: self.nodes[n].liquids[by_liquid] for n in self.nodes})
+        if sort:
+            df.sort_values(ascending=False, inplace=True)
+        return df
