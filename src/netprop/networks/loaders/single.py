@@ -150,6 +150,8 @@ class NetpropNetwork(PPINetworkLoader):
         for k, v in network_data.data.items():
             network.graph[k] = v
 
+        return network
+
     @staticmethod
     def record_network(network: nx.Graph, file_path: str):
         nodes = [NetpropNodeModel(id=n, data=data) for n, data in network.nodes(data=True)]
