@@ -49,7 +49,7 @@ def propagate(network, config: ConfigModel, output_dir):
     suppressed_set = config.suppressed_set.nodes
     prior_set, prior_set_confidence = config.prior_set.nodes, config.prior_set.confidence
     for prior in prior_set:
-        network.nodes[prior.id][PropagationNetwork.CONTAINER_KEY].source_of = prior.source_of
+        network.nodes[prior.id]["source_of"] = prior.source_of
 
     network.graph["prior_set"] = prior_set
     network.graph["suppressed_nodes"] = suppressed_set

@@ -144,7 +144,7 @@ class Propagater:
         # adjacency_matrix = self._normalize_edge_weights(self._adjacency_matrix) # since the matrix is now the same in all iterations, do this once at the object level
         liquids = {}
         for prior in prior_set:
-            for liquid in self.network.nodes[prior][self.network.CONTAINER_KEY].source_of:
+            for liquid in self.network.nodes[prior]["source_of"]:
                 if liquid in liquids:
                     liquids[liquid].add(prior)
                 else:

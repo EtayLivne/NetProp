@@ -1,8 +1,10 @@
 import json
 import ndex2.client
+import networkx as nx
 
 
 from .base import SingleNetworkLoader
+from netprop.models import NetpropNetworkModel, NetpropNodeModel, NetpropEdgeModel
 from netprop.generic_utils.constants import SpeciesIDs, NodeAttrs
 from netprop.generic_utils.data_handlers.extractors import HSapiensExtractor
 from netprop.generic_utils.data_handlers.translators import GeneinfoToEntrezID
@@ -15,7 +17,7 @@ class PPINetworkLoader(SingleNetworkLoader):
     @classmethod
     def _new_node_attrs(cls, species):
         return {
-            PropagationNetwork.CONTAINER_KEY: PropagationContainer(source_of=set()),
+           "source_of": [],
             cls.SPECIES_ID_KEY: species
         }
 
@@ -34,7 +36,7 @@ class HSapiensNetworkLoader(PPINetworkLoader):
         self.network_extractor = HSapiensExtractor(self.network_source_path)
 
     def load(self, *args, **kwargs):
-        network = PropagationNetwork()
+        network = nx.Graph()
         edge_triplets = self.network_extractor.extract()
         for edge_triplet in edge_triplets:
             source_node, target_node, edge_weight = self.network_extractor.unpack_triplet(edge_triplet)
@@ -132,3 +134,27 @@ class MetaCovidHumanLoader(HSapiensNetworkLoader):
 
     def _calc_confidence(self, num_paper_appearances):
         return self.CONFIDENCE_SCORES[num_paper_appearances]
+
+
+
+class NetpropNetwork(PPINetworkLoader):
+    def __init__(self, network_path: str):
+        self.network_path = network_path
+
+    def load(self, *args, **kwargs):
+        network_data = NetpropNetworkModel.parse_file(self.network_path)
+        network = PropagationNetwork()
+
+        network.add_edges_from([(n.id, n.data) for n in network_data.nodes])
+        network.add_weighted_edges_from([e.source, e.target, e.weight] for e in network_data.edges)
+        for k, v in network_data.data.items():
+            network.graph[k] = v
+
+    @staticmethod
+    def record_network(network: nx.Graph, file_path: str):
+        nodes = [NetpropNodeModel(id=n, data=data) for n, data in network.nodes(data=True)]
+        edges = [NetpropEdgeModel(source=e[0], target=e[1], weight=e[2]) for e in network.edges.data("weight")]
+        data = network.graph
+        model = NetpropNetworkModel(nodes=nodes, edges=edges, data=data)
+        with open(file_path, 'w') as handler:
+            json.dump(model.dict(), handler, indent=4)
