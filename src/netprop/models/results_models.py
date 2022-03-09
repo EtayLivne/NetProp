@@ -40,9 +40,10 @@ class PropagationResultModel(BaseModel):
     def prop_scroes_as_series(self, by_liquids: Union[str, list[str]]="info", sort: bool=False):
         if not isinstance(by_liquids, list):
             by_liquids = [by_liquids]
+        
         n_list = self.nodes.keys()
         df_columns = [n_list] + [[self.nodes[n].liquids.get(liquid, 0) for n in n_list] for liquid in by_liquids]
-        df_column_names = ["nodes"] + by_liquids
+        df_column_names = ["nodes"] + [self.id + liquid for liquid in by_liquids]
 
         df = DataFrame(df_columns, columns=df_column_names)
         if sort:
