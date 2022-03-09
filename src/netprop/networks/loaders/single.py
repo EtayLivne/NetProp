@@ -145,7 +145,7 @@ class NetpropNetwork(PPINetworkLoader):
         network_data = NetpropNetworkModel.parse_file(self.network_path)
         network = PropagationNetwork()
 
-        network.add_edges_from([(n.id, n.data) for n in network_data.nodes])
+        network.add_nodes_from([(n.id, n.data) for n in network_data.nodes])
         network.add_weighted_edges_from([e.source, e.target, e.weight] for e in network_data.edges)
         for k, v in network_data.data.items():
             network.graph[k] = v
