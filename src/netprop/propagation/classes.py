@@ -79,10 +79,11 @@ class Propagater:
 
     @network.setter
     def network(self, network):
-        if not isinstance(network, PropagationNetwork):
-            raise TypeError(f"Propagation_network must be of type {type(PropagationNetwork)}, given {type(network)}")
-        if not network.is_ready_for_propagation():
-            raise PropagationNetworkError("Network does not conform to all structural requirements for propagation")
+        # TODO remove
+        # if not isinstance(network, PropagationNetwork):
+        #     raise TypeError(f"Propagation_network must be of type {type(PropagationNetwork)}, given {type(network)}")
+        # if not network.is_ready_for_propagation():
+        #     raise PropagationNetworkError("Network does not conform to all structural requirements for propagation")
         self._network = network
 
     @property

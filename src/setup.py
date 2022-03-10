@@ -5,7 +5,7 @@ setup(
     version='0.0.4.2',
     packages=find_packages(),
     install_requires=[
-        'matplotlib==3.5.0',
+        'matplotlib==3.5.1',
         'mygene==3.2.2',
         'ndex2==3.4.0',
         'networkx==2.6.3',

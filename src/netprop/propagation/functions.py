@@ -24,7 +24,7 @@ def record_propagation_result(propagater, suppressed_nodes, file_path, propagati
     halt_conditions = HaltConditionOptionModel(max_steps=max_steps, min_gap=min_gap)
     non_metadata_fields = Propagater.propagation_related_node_metadata()
     nodes = {node: PropagationNodeModel(id=node,
-                                        source_of=data[PropagationNetwork.CONTAINER_KEY].source_of,
+                                        source_of=data["source_of"],
                                         liquids=propagater.node_liquids(node),
                                         metadata={k: v for k, v in data.items() if k not in non_metadata_fields})
              for node, data in propagater.network.nodes(data=True)} # used to have a "if node not in suppressed_nodes" clause
@@ -64,7 +64,7 @@ def propagate(network, config: ConfigModel, output_dir):
                               propagation_id)
 
     for prior in prior_set:
-        network.nodes[prior.id][PropagationNetwork.CONTAINER_KEY].source_of = set()
+        network.nodes[prior.id]["source_of"] = set()
 
 
 def propagation_worker(queue):

@@ -41,7 +41,7 @@ class PropagationResultModel(BaseModel):
         if not isinstance(by_liquids, list):
             by_liquids = [by_liquids]
 
-        n_list = self.nodes.keys()
+        n_list = list(self.nodes.keys())
         df_columns = [n_list] + [[self.nodes[n].liquids.get(liquid, 0) for n in n_list] for liquid in by_liquids]
         df_column_names = ["nodes"] + [self.id + liquid for liquid in by_liquids]
 
