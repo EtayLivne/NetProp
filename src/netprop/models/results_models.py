@@ -45,7 +45,8 @@ class PropagationResultModel(BaseModel):
         df_columns = [n_list] + [[self.nodes[n].liquids.get(liquid, 0) for n in n_list] for liquid in by_liquids]
         df_column_names = ["nodes"] + [self.id + liquid for liquid in by_liquids]
 
-        df = DataFrame(df_columns, columns=df_column_names)
+        dict_form = {df_column_names[i]: df_columns[i] for i in range(len(df_columns))}
+        df = DataFrame(dict_form)
         if sort:
             df.sort_values(ascending=False, inplace=True)
         return df
