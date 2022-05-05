@@ -70,6 +70,16 @@ class ConfigModel(BaseModel):
     suppressed_set: Optional[Union[SuppressedSetModel, List[SuppressedSetModel]]]
     halt_conditions: HaltConditionOptionModel
     method: str = "iterative"
+    norm: Optional[str]
+    norm_kwargs: Optional[dict]
     id: Optional[str] = None
     output_dir_path: Optional[str]
 
+
+class ArgsModel(BaseModel):
+    prop_id: str
+    network_init_args: list
+    prior_set: Union[list[str], dict[str, list[str]]]
+    suppressed_set: Optional[list[str]]
+    norm: Optional[str]
+    norm_kwargs: Optional[dict]

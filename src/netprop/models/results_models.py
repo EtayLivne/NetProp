@@ -37,13 +37,13 @@ class PropagationResultModel(BaseModel):
     prior_set_confidence: float
     halt_conditions: HaltConditionOptionModel
 
-    def prop_scroes_as_series(self, by_liquids: Union[str, list[str]]="info", sort: bool=False):
+    def prop_scores_as_series(self, by_liquids: Union[str, list[str]]= "info", sort: bool=False):
         if not isinstance(by_liquids, list):
             by_liquids = [by_liquids]
 
-        n_list = list(self.nodes.keys())
+        n_list = sorted(list(self.nodes.keys()))
         df_columns = [n_list] + [[self.nodes[n].liquids.get(liquid, 0) for n in n_list] for liquid in by_liquids]
-        df_column_names = ["nodes"] + [self.id + liquid for liquid in by_liquids]
+        df_column_names = ["nodes"] + [self.id + "." + liquid for liquid in by_liquids]
 
         dict_form = {df_column_names[i]: df_columns[i] for i in range(len(df_columns))}
         df = DataFrame(dict_form)

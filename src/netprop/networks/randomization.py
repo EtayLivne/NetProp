@@ -7,7 +7,7 @@ from multiprocessing import Queue, Pool, cpu_count
 from .loaders import single as network_loaders
 
 
-def generate_rank_equivalent_network(network: nx.Graph, edge_switch_factor):
+def generate_rank_equivalent_network(network: nx.Graph, edge_switch_factor: float) -> None:
     """
     has only one type of switch: target switch. Since each edge has equaly chances of being selected in one direction
     as in the other, this should be the same as tossing a coin to decide which kind of switch to perform.
@@ -19,6 +19,8 @@ def generate_rank_equivalent_network(network: nx.Graph, edge_switch_factor):
     degree_weighted_nodes = []
     for node in network.nodes:
         degree_weighted_nodes.extend([node] * network.degree(node))
+
+    print(f"switches: {switches}")
 
     while switches:
         # randomly select and edge
@@ -45,9 +47,8 @@ def generate_rank_equivalent_network(network: nx.Graph, edge_switch_factor):
         switches -= 1
 
 
-def _randomizing_worker_main(network_loader_class, network_loader_args, network_loader_kwargs, queue):
-    network_loader = network_loader_class(*network_loader_args, **network_loader_kwargs)
-    network = network_loader.load()
+def _randomizing_worker_main(network, queue):
+
     while True:
         randomization_request = queue.get(block=True)
 
@@ -57,16 +58,23 @@ def _randomizing_worker_main(network_loader_class, network_loader_args, network_
         switch_factor = randomization_request["edge_switch_factor"]
         print(f"now handling request for {output_path}")
         generate_rank_equivalent_network(network, switch_factor)
-        network_loader_class.record_network(network, output_path)
+        network_loaders.NetpropNetwork.record_network(network, output_path)
 
 
-def randomize_network(number_of_randomizations, edge_switch_factor,
-                      network_loader_class, network_loadr_args, network_loader_kwargs, output_dir):
-    num_workers = cpu_count() - 2
+def randomize_network(number_of_randomizations: int, edge_switch_factor: float,
+                      network_loader_class, network_loader_args, network_loader_kwargs, output_dir: str,
+                      max_workers=cpu_count()-2):
+    network_loader = network_loader_class(*network_loader_args, **network_loader_kwargs)
+    network = network_loader.load()
+    randomize_preloaded_network(network, number_of_randomizations, edge_switch_factor, output_dir, max_workers=max_workers)
+
+
+def randomize_preloaded_network(network: nx.Graph, number_of_randomizations: int, edge_switch_factor: float, output_dir,
+                                max_workers=cpu_count()-2):
     queue = Queue()
-    randomizers = Pool(num_workers, _randomizing_worker_main,
-                       (network_loader_class, network_loadr_args, network_loader_kwargs, queue))
-    original_network_name ="h_sapiens"
+    num_workers = min(max_workers, number_of_randomizations)
+    worker_pool = Pool(num_workers, _randomizing_worker_main, (network, queue))
+    original_network_name = "h_sapiens"
     for i in range(number_of_randomizations):
         queue.put({"edge_switch_factor": edge_switch_factor,
                    "output_path": os_path.join(output_dir, original_network_name + f"_{i}")})
@@ -76,8 +84,8 @@ def randomize_network(number_of_randomizations, edge_switch_factor,
 
     queue.close()
     queue.join_thread()
-    randomizers.close()
-    randomizers.join()
+    worker_pool.close()
+    worker_pool.join()
 
 
 if __name__ == "__main__":

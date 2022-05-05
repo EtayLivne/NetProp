@@ -8,8 +8,6 @@ from netprop.models import NetpropNetworkModel, NetpropNodeModel, NetpropEdgeMod
 from netprop.generic_utils.constants import SpeciesIDs, NodeAttrs
 from netprop.generic_utils.data_handlers.extractors import HSapiensExtractor
 from netprop.generic_utils.data_handlers.translators import GeneinfoToEntrezID
-from netprop.propagation.classes import PropagationNetwork, PropagationContainer
-
 
 class PPINetworkLoader(SingleNetworkLoader):
     SPECIES_ID_KEY = NodeAttrs.SPECIES_ID.value
@@ -143,7 +141,7 @@ class NetpropNetwork(PPINetworkLoader):
 
     def load(self, *args, **kwargs):
         network_data = NetpropNetworkModel.parse_file(self.network_path)
-        network = PropagationNetwork()
+        network = nx.Graph()
 
         network.add_nodes_from([(n.id, n.data) for n in network_data.nodes])
         network.add_weighted_edges_from([e.source, e.target, e.weight] for e in network_data.edges)
@@ -160,3 +158,12 @@ class NetpropNetwork(PPINetworkLoader):
         model = NetpropNetworkModel(nodes=nodes, edges=edges, data=data)
         with open(file_path, 'w') as handler:
             json.dump(model.dict(), handler, indent=4)
+
+
+class NetwrokxLoader(SingleNetworkLoader):
+    def __init__(self, network):
+        super().__init__()
+        self.network = network
+
+    def load(self, *args, **kwargs):
+        return self.network
