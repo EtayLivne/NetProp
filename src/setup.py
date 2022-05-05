@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='netprop',
-    version='0.0.4.4',
+    version='0.0.5',
     packages=find_packages(),
     install_requires=[
         'matplotlib==3.5.1',
