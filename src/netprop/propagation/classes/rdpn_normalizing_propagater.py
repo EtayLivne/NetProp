@@ -76,7 +76,7 @@ class RDPNNormalizingPropagater(NormalizingPropagater):
                 true_score = self._state.loc[node][liquid_name]
                 rand_scores = rand_df.loc[node]
                 # counts which percentage of the random results are larger than the true. That's the p value.
-                rdpn_vals[node] = 1 - len(rand_scores[rand_scores < true_score]) / row_length
+                rdpn_vals[node] = 1 - len(rand_scores[rand_scores < true_score]) / len(rand_scores)
 
             self._state[f"rdpn_p_value_{liquid_name}"] = pd.Series(rdpn_vals)
 
