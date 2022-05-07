@@ -38,8 +38,14 @@ class PropagationResultModel(BaseModel):
     halt_conditions: HaltConditionOptionModel
 
     def prop_scores_as_series(self, by_liquids: Union[str, list[str]]= "info", sort: bool=False):
-        if not isinstance(by_liquids, list):
+        if by_liquids is not None and not isinstance(by_liquids, list):
             by_liquids = [by_liquids]
+        elif by_liquids is None:
+            by_liquids = set()
+            for node_data in self.nodes.values():
+                liquid_dict = node_data.liquids
+                for k in liquid_dict.keys():
+                    by_liquids.add(k)
 
         n_list = sorted(list(self.nodes.keys()))
         df_columns = [n_list] + [[self.nodes[n].liquids.get(liquid, 0) for n in n_list] for liquid in by_liquids]
