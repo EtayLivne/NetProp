@@ -49,7 +49,7 @@ class RDPNNormalizingPropagater(NormalizingPropagater):
             return pd.DataFrame()
         df = df_list[0].copy()
         for other_df in df_list[1:]:
-            df = df.join(other_df, on=col)
+            df = df.merge(other_df, on=col)
         return df
 
     def _rand_scores_df_dict(self, artifacts_path: str) -> dict[str, pd.DataFrame]:
